@@ -10,11 +10,18 @@ SERVER_CMD="docker mcp gateway run"
 # SERVER_CMD="node ./mcp-server/index.js"
 
 MCP_TOOLS=$(get_mcp_tools "$SERVER_CMD")
+
+# echo "---------------------------------------------------------"
+# echo "Available tools:"
+# echo "${MCP_TOOLS}"
+# echo "---------------------------------------------------------"
+
 #TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
 # Transform tools to OpenAI format with filtering
 # This will only include tools that match the filter criteria
 # For example, if you want to filter tools that contain "search" or "fetch"
 TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
+#TOOLS=$(transform_to_openai_format "${MCP_TOOLS}")
 
 
 read -r -d '' DATA <<- EOM

@@ -7,7 +7,6 @@ MODEL=${MODEL_RUNNER_CHAT_MODEL}
 # Initialize conversation history array
 CONVERSATION_HISTORY=()
 
-
 function callback() {
   echo -n "$1"
   # Accumulate assistant response
