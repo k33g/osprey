@@ -50,6 +50,7 @@ read -r -d '' TOOLS <<- EOM
 ]
 EOM
 
+
 : <<'COMMENT'
 Examples of request with function calling:
 Say Hello to Bob

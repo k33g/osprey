@@ -158,6 +158,132 @@ EOM
 
 See the `examples/` directory for more detailed usage examples including conversation memory management.
 
+## Using MCP Server
+
+Osprey supports Model Context Protocol (MCP) servers for extended function calling capabilities. You can use custom MCP servers that communicate via standard input/output to provide additional tools and functionalities.
+
+### Setting up an MCP Server
+
+First, build your MCP server Docker image:
+```bash
+cd examples/07-use-mcp/mcp-server
+docker build -t osprey-mcp-server:demo .
+```
+
+### Using MCP Tools
+
+```bash
+#!/bin/bash
+. "./osprey.sh"
+
+DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
+MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
+
+# Define the MCP server command
+SERVER_CMD="docker run --rm -i osprey-mcp-server:demo"
+
+# Get available tools from MCP server
+MCP_TOOLS=$(get_mcp_tools "$SERVER_CMD")
+TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
+
+read -r -d '' DATA <<- EOM
+{
+  "model": "${MODEL}",
+  "options": {
+    "temperature": 0.0
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "Say hello to Bob and calculate the sum of 5 and 37"
+    }
+  ],
+  "tools": ${TOOLS},
+  "parallel_tool_calls": true,
+  "tool_choice": "auto"
+}
+EOM
+
+# Make function call request
+RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
+TOOL_CALLS=$(get_tool_calls "${RESULT}")
+
+# Process tool calls
+for tool_call in $TOOL_CALLS; do
+    FUNCTION_NAME=$(get_function_name "$tool_call")
+    FUNCTION_ARGS=$(get_function_args "$tool_call")
+    
+    # Execute function via MCP
+    MCP_RESPONSE=$(call_mcp_tool "$SERVER_CMD" "$FUNCTION_NAME" "$FUNCTION_ARGS")
+    RESULT_CONTENT=$(get_tool_content "$MCP_RESPONSE")
+    
+    echo "Function result: $RESULT_CONTENT"
+done
+```
+
+## Using Docker MCP Gateway
+
+The Docker MCP Gateway provides access to a collection of pre-built MCP tools through Docker's MCP integration. This allows you to leverage existing MCP tools without setting up individual servers.
+
+### Basic Usage
+
+```bash
+#!/bin/bash
+. "./osprey.sh"
+
+DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
+MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
+
+# Use Docker MCP Gateway
+SERVER_CMD="docker mcp gateway run"
+
+# Get available tools and filter specific ones
+MCP_TOOLS=$(get_mcp_tools "$SERVER_CMD")
+TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
+
+read -r -d '' DATA <<- EOM
+{
+  "model": "${MODEL}",
+  "options": {
+    "temperature": 0.0
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "fetch https://raw.githubusercontent.com/k33g/osprey/refs/heads/main/README.md"
+    }
+  ],
+  "tools": ${TOOLS},
+  "tool_choice": "auto"
+}
+EOM
+
+# Execute the request
+RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
+TOOL_CALLS=$(get_tool_calls "${RESULT}")
+
+# Process tool calls
+for tool_call in $TOOL_CALLS; do
+    FUNCTION_NAME=$(get_function_name "$tool_call")
+    FUNCTION_ARGS=$(get_function_args "$tool_call")
+    
+    # Execute function via MCP Gateway
+    MCP_RESPONSE=$(call_mcp_tool "$SERVER_CMD" "$FUNCTION_NAME" "$FUNCTION_ARGS")
+    RESULT_CONTENT=$(get_tool_content "$MCP_RESPONSE")
+    
+    echo "Function result: $RESULT_CONTENT"
+done
+```
+
+### Tool Filtering
+
+You can filter available tools using the `transform_to_openai_format_with_filter` function to only include tools that match specific criteria:
+
+```bash
+# Filter tools containing "search" or "fetch"
+TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
+```
+
 ## Creating an Agent with Agentic Compose
 
 You can create containerized AI agents using Docker Compose for easy deployment and management. The `examples/05-compose-agent/` directory demonstrates how to build a complete agentic system.
