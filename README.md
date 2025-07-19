@@ -66,6 +66,61 @@ function callback() {
 osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
 ```
 
+### Function Calling
+```bash
+DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
+MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
+
+# Define your tools in JSON format
+TOOLS='[
+  {
+    "type": "function",
+    "function": {
+      "name": "calculate_sum",
+      "description": "Calculate the sum of two numbers",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "a": {"type": "number", "description": "The first number"},
+          "b": {"type": "number", "description": "The second number"}
+        },
+        "required": ["a", "b"]
+      }
+    }
+  }
+]'
+
+DATA='{
+  "model":"'${MODEL}'",
+  "messages": [
+    {"role":"user", "content": "Calculate the sum of 5 and 10"}
+  ],
+  "tools": '${TOOLS}',
+  "tool_choice": "auto"
+}'
+
+# Make the function call request
+response=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
+
+# Extract and process tool calls
+TOOL_CALLS=$(get_tool_calls "${response}")
+for tool_call in $TOOL_CALLS; do
+    FUNCTION_NAME=$(get_function_name "$tool_call")
+    FUNCTION_ARGS=$(get_function_args "$tool_call")
+    CALL_ID=$(get_call_id "$tool_call")
+    
+    # Execute your function logic here
+    case "$FUNCTION_NAME" in
+        "calculate_sum")
+            A=$(echo "$FUNCTION_ARGS" | jq -r '.a')
+            B=$(echo "$FUNCTION_ARGS" | jq -r '.b')
+            SUM=$((A + B))
+            echo "Result: $SUM"
+            ;;
+    esac
+done
+```
+
 See the `examples/` directory for more detailed usage examples including conversation memory management.
 
 ## Creating an Agent with Agentic Compose
