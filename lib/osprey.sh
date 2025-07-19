@@ -7,7 +7,7 @@ COMMENT
 
 function osprey_version() {
     echo "Osprey - A Bash library for interacting with the DMR API"
-    echo "Version: 0.0.2"
+    echo "Version: 0.0.3"
     echo "Author: k33g"
     echo "License: unlicense"
 }
@@ -167,7 +167,7 @@ Returns:
 COMMENT
 function print_raw_response() {
     local result="$1"
-    echo "Raw JSON response:"
+    #echo "Raw JSON response:"
     echo "${result}" | jq '.'
 }
 
@@ -182,7 +182,7 @@ Returns:
 COMMENT
 function print_tool_calls() {
     local result="$1"
-    echo "Tool calls detected:"
+    #echo "Tool calls detected:"
     echo "${result}" | jq -r '.choices[0].message.tool_calls[]? | "Function: \(.function.name), Args: \(.function.arguments)"'
 }
 
@@ -258,4 +258,208 @@ function get_call_id() {
     local tool_call="$1"
     local decoded=$(decode_tool_call "$tool_call")
     echo "$decoded" | jq -r '.id'
+}
+
+: <<'COMMENT'
+get_mcp_tools - Gets the tools list from an MCP server by sending the proper initialization sequence.
+
+Args:
+    server_command (str): The command to run the MCP server (e.g., "node index.js").
+
+Returns:
+    str: JSON array of tools from the MCP server.
+COMMENT
+function get_mcp_tools() {
+    local server_command="$1"
+    
+    if [ -z "$server_command" ]; then
+        echo "Error: Server command is required" >&2
+        return 1
+    fi
+    
+    # Create a temporary input file with the MCP initialization sequence
+    local temp_file=$(mktemp)
+    
+    cat > "$temp_file" << 'EOF'
+{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "osprey", "version": "0.0.2"}}}
+{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
+EOF
+    
+    # Run the server with the input and extract tools list
+    local result=$(cat "$temp_file" | $server_command 2>/dev/null | jq -r 'select(.id == 2) | .result.tools')
+    
+    # Clean up
+    rm "$temp_file"
+    
+    # Return the tools list
+    echo "$result"
+}
+
+: <<'COMMENT'
+transform_to_openai_format - Transforms MCP tools format to OpenAI API format for function calling.
+
+Args:
+    mcp_tools (str): JSON array of tools in MCP format.
+
+Returns:
+    str: JSON array of tools in OpenAI API format.
+COMMENT
+function transform_to_openai_format() {
+    local mcp_tools="$1"
+    
+    if [ -z "$mcp_tools" ] || [ "$mcp_tools" = "null" ]; then
+        echo "[]"
+        return
+    fi
+    
+    echo "$mcp_tools" | jq '[
+        .[] | {
+            "type": "function",
+            "function": {
+                "name": .name,
+                "description": .description,
+                "parameters": (
+                    .inputSchema | 
+                    del(."$schema") | 
+                    del(.additionalProperties) |
+                    if .properties then
+                        .properties |= with_entries(
+                            if .value.description then . 
+                            else .value += {"description": ("The " + .key + " parameter")}
+                            end
+                        )
+                    else . end
+                )
+            }
+        }
+    ]'
+}
+
+: <<'COMMENT'
+transform_to_openai_format_with_filter - Transforms MCP tools format to OpenAI API format for function calling with filtering.
+
+Args:
+    mcp_tools (str): JSON array of tools in MCP format.
+    filters (array): Array of tool names to include (e.g., ("tool1" "tool2" "tool3")).
+
+Returns:
+    str: JSON array of filtered tools in OpenAI API format.
+COMMENT
+function transform_to_openai_format_with_filter() {
+    local mcp_tools="$1"
+    shift
+    local filters=("$@")
+    
+    if [ -z "$mcp_tools" ] || [ "$mcp_tools" = "null" ]; then
+        echo "[]"
+        return
+    fi
+    
+    if [ ${#filters[@]} -eq 0 ]; then
+        echo "[]"
+        return
+    fi
+    
+    # Create a JQ filter expression for the tool names
+    local filter_expression=""
+    for tool in "${filters[@]}"; do
+        if [ -z "$filter_expression" ]; then
+            filter_expression=".name == \"$tool\""
+        else
+            filter_expression="$filter_expression or .name == \"$tool\""
+        fi
+    done
+    
+    echo "$mcp_tools" | jq '[
+        .[] | select('"$filter_expression"') | {
+            "type": "function",
+            "function": {
+                "name": .name,
+                "description": .description,
+                "parameters": (
+                    .inputSchema | 
+                    del(."$schema") | 
+                    del(.additionalProperties) |
+                    if .properties then
+                        .properties |= with_entries(
+                            if .value.description then . 
+                            else .value += {"description": ("The " + .key + " parameter")}
+                            end
+                        )
+                    else . end
+                )
+            }
+        }
+    ]'
+}
+
+: <<'COMMENT'
+call_mcp_tool - Calls an MCP tool by sending the proper initialization sequence and tool call request.
+
+Args:
+    server_command (str): The command to run the MCP server (e.g., "node index.js").
+    tool_name (str): The name of the tool to call.
+    tool_arguments (str): JSON string of arguments to pass to the tool.
+
+Returns:
+    str: Complete JSON response from the MCP server including the tool call result.
+COMMENT
+function call_mcp_tool() {
+    local server_command="$1"
+    local tool_name="$2"
+    local tool_arguments="$3"
+    
+    if [ -z "$server_command" ]; then
+        echo "Error: Server command is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$tool_name" ]; then
+        echo "Error: Tool name is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$tool_arguments" ]; then
+        tool_arguments="{}"
+    fi
+    
+    # Create a temporary input file with the MCP initialization sequence and tool call
+    local temp_file=$(mktemp)
+    
+    cat > "$temp_file" << EOF
+{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "osprey", "version": "0.0.2"}}}
+{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+{"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "$tool_name", "arguments": $tool_arguments}}
+EOF
+    
+    # Run the server with the input and extract the tool call response
+    local result=$(cat "$temp_file" | $server_command 2>/dev/null | jq -c '.' | jq -s '.')
+    
+    # Clean up
+    rm "$temp_file"
+    
+    # Return the response
+    echo "$result"
+}
+
+: <<'COMMENT'
+get_tool_content - Extracts the text content from an MCP tool call response.
+
+Args:
+    response (str): The JSON response from call_mcp_tool function.
+
+Returns:
+    str: The text content from the tool call result.
+COMMENT
+function get_tool_content() {
+    local response="$1"
+    
+    if [ -z "$response" ]; then
+        echo "Error: Response is required" >&2
+        return 1
+    fi
+    
+    # Extract the content text from the tool call response
+    echo "$response" | jq -r '.[] | select(.id == 2) | .result.content[0].text'
 }
