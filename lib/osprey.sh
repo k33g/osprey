@@ -101,3 +101,33 @@ function osprey_chat_stream() {
             on_stream "${linestream}" ${CALL_BACK}
         done 
 }
+
+: <<'COMMENT'
+Conversation memory management functions for handling chat history.
+COMMENT
+
+function add_user_message() {
+  local user_content="$1"
+  CONVERSATION_HISTORY+=("{\"role\":\"user\", \"content\": \"${user_content//\"/\\\"}\"}")
+}
+
+function add_assistant_message() {
+  local assistant_content="$1"
+  CONVERSATION_HISTORY+=("{\"role\":\"assistant\", \"content\": \"${assistant_content//\"/\\\"}\"}")
+}
+
+function add_system_message() {
+  local system_content="$1"
+  CONVERSATION_HISTORY+=("{\"role\":\"system\", \"content\": \"${system_content//\"/\\\"}\"}")
+}
+
+function build_messages_array() {
+  MESSAGES="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
+  for msg in "${CONVERSATION_HISTORY[@]}"; do
+    MESSAGES="${MESSAGES}, ${msg}"
+  done
+}
+
+function clear_conversation_history() {
+  CONVERSATION_HISTORY=()
+}

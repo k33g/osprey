@@ -1,18 +1,13 @@
 #!/bin/bash
-. "../../lib/osprey.sh"
+. "./osprey.sh"
 
-DMR_BASE_URL=${DMR_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
+DMR_BASE_URL=${MODEL_RUNNER_BASE_URL}
 
-MODEL="ai/qwen2.5:latest"
-
-read -r -d '' SYSTEM_INSTRUCTION <<- EOM
-You are an expert of the StarTrek universe. 
-Your name is Seven of Nine.
-Speak like a Borg.
-EOM
+MODEL=${MODEL_RUNNER_CHAT_MODEL}
 
 # Initialize conversation history array
 CONVERSATION_HISTORY=()
+
 
 function callback() {
   echo -n "$1"
@@ -29,13 +24,10 @@ while true; do
   fi
 
   # Add user message to conversation history
-  CONVERSATION_HISTORY+=("{\"role\":\"user\", \"content\": \"${USER_CONTENT//\"/\\\"}\"}")
+  add_user_message "$USER_CONTENT"
   
   # Build messages array with system message and conversation history
-  MESSAGES="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
-  for msg in "${CONVERSATION_HISTORY[@]}"; do
-    MESSAGES="${MESSAGES}, ${msg}"
-  done
+  build_messages_array
 
   read -r -d '' DATA <<- EOM
 {
@@ -55,7 +47,7 @@ EOM
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
   
   # Add assistant response to conversation history
-  CONVERSATION_HISTORY+=("{\"role\":\"assistant\", \"content\": \"${ASSISTANT_RESPONSE//\"/\\\"}\"}")
+  add_assistant_message "$ASSISTANT_RESPONSE"
   
   echo ""
   echo ""

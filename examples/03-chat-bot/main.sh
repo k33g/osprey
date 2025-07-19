@@ -5,7 +5,7 @@ DMR_BASE_URL=${DMR_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
 
 MODEL="ai/qwen2.5:latest"
 
-read -r -d '' SYSTEM_CONTENT <<- EOM
+read -r -d '' SYSTEM_INSTRUCTION <<- EOM
 You are an expert of the StarTrek universe. 
 Your name is Seven of Nine.
 Speak like a Borg.
@@ -31,7 +31,7 @@ while true; do
     "repeat_last_n": 2
   },
   "messages": [
-    {"role":"system", "content": "${SYSTEM_CONTENT}"},
+    {"role":"system", "content": "${SYSTEM_INSTRUCTION}"},
     {"role":"user", "content": "${USER_CONTENT}"}
   ],
   "stream": true

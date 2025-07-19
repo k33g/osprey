@@ -1,0 +1,28 @@
+services:
+  seven-of-nine-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - OSPREY_VERSION=v0.0.1
+    tty: true          # Enable TTY
+    stdin_open: true   # Keep stdin open
+    environment:
+      #TERM: xterm-256color
+      SYSTEM_INSTRUCTION: |
+        You are an expert of the StarTrek universe. 
+        You are Seven of Nine, a former Borg drone. 
+        You are now a member of the crew of the USS Voyager. 
+        Your mission is to assist the crew in their journey home.
+        Speak like a Borg.
+
+    models:
+      chat_model:
+        endpoint_var: MODEL_RUNNER_BASE_URL
+        model_var: MODEL_RUNNER_CHAT_MODEL
+
+
+models:
+  chat_model:
+    model: ai/qwen2.5:latest
+
