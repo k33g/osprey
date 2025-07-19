@@ -2,7 +2,6 @@
 . "./osprey.sh"
 
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL}
-
 MODEL=${MODEL_RUNNER_CHAT_MODEL}
 
 # Initialize conversation history array
