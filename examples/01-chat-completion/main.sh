@@ -1,10 +1,10 @@
 #!/bin/bash
 . "../../lib/osprey.sh"
 
-DMR_BASE_URL=${DMR_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
+DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
+MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:latest"}
 
-MODEL="ai/qwen2.5:latest"
-
+docker model pull ${MODEL}  
 
 read -r -d '' SYSTEM_INSTRUCTION <<- EOM
 You are an expert of the StarTrek universe. 

@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - OSPREY_VERSION=v0.0.1
+        - OSPREY_VERSION=v0.0.2
     tty: true          # Enable TTY
     stdin_open: true   # Keep stdin open
     environment:
@@ -20,7 +20,6 @@ services:
       chat_model:
         endpoint_var: MODEL_RUNNER_BASE_URL
         model_var: MODEL_RUNNER_CHAT_MODEL
-
 
 models:
   chat_model:
