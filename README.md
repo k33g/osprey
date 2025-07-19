@@ -67,3 +67,94 @@ osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
 ```
 
 See the `examples/` directory for more detailed usage examples including conversation memory management.
+
+## Creating an Agent with Agentic Compose
+
+You can create containerized AI agents using Docker Compose for easy deployment and management. The `examples/05-compose-agent/` directory demonstrates how to build a complete agentic system.
+
+### Quick Start
+
+```bash
+cd examples/05-compose-agent/
+docker compose up --build -d
+docker attach $(docker compose ps -q seven-of-nine-agent)
+```
+
+### Agent Architecture
+
+The agentic compose setup includes:
+
+- **Containerized Environment**: Complete isolation with all dependencies
+- **Interactive Interface**: Uses `gum` for enhanced command-line interactions
+- **Conversation Memory**: Persistent chat history throughout sessions
+- **Streaming Responses**: Real-time token generation
+- **Character Personas**: Configurable system instructions for roleplay
+
+### Configuration
+
+Configure your agent through `compose.yml`:
+
+```yaml
+services:
+  your-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - OSPREY_VERSION=v0.0.1
+    tty: true
+    stdin_open: true
+    environment:
+      SYSTEM_INSTRUCTION: |
+        You are a helpful AI assistant.
+        Your role is to...
+    models:
+      chat_model:
+        endpoint_var: MODEL_RUNNER_BASE_URL
+        model_var: MODEL_RUNNER_CHAT_MODEL
+
+models:
+  chat_model:
+    model: ai/qwen2.5:latest
+```
+
+### Agent Script Structure
+
+```bash
+#!/bin/bash
+. "./osprey.sh"
+
+# Initialize conversation
+CONVERSATION_HISTORY=()
+
+function callback() {
+  echo -n "$1"
+  ASSISTANT_RESPONSE+="$1"
+}
+
+while true; do
+  USER_CONTENT=$(gum write --placeholder "How can I help you?")
+  
+  if [[ "$USER_CONTENT" == "/bye" ]]; then
+    break
+  fi
+
+  add_user_message "$USER_CONTENT"
+  build_messages_array
+  
+  # Create API request with conversation history
+  DATA='{
+    "model":"'${MODEL}'",
+    "messages": ['${MESSAGES}'],
+    "stream": true
+  }'
+  
+  ASSISTANT_RESPONSE=""
+  osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
+  add_assistant_message "$ASSISTANT_RESPONSE"
+  
+  echo -e "\n"
+done
+```
+
+This creates a fully interactive, containerized AI agent with conversation memory and streaming responses.
