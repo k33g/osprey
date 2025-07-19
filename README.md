@@ -158,9 +158,9 @@ EOM
 
 See the `examples/` directory for more detailed usage examples including conversation memory management.
 
-## Using MCP Server
+## Using STDIO MCP Server
 
-Osprey supports Model Context Protocol (MCP) servers for extended function calling capabilities. You can use custom MCP servers that communicate via standard input/output to provide additional tools and functionalities.
+Osprey supports Model Context Protocol (MCP) servers with STDIO transport for extended function calling capabilities. You can use custom MCP servers that communicate via standard input/output to provide additional tools and functionalities.
 
 ### Setting up an MCP Server
 
@@ -220,6 +220,79 @@ for tool_call in $TOOL_CALLS; do
     echo "Function result: $RESULT_CONTENT"
 done
 ```
+
+## Using Streamable HTTP MCP Server
+
+Osprey supports MCP servers with streamable HTTP transport for real-time tool execution and response streaming. This allows for more interactive experiences with MCP tools that can provide streaming responses.
+
+### Setting up a Streamable HTTP MCP Server
+
+First, build your streamable HTTP MCP server Docker image:
+```bash
+cd examples/10-use-streamable-mcp/mcp-server
+docker build -t osprey-streamable-mcp-server:demo .
+```
+
+Start the server:
+```bash
+docker run --rm -p 8080:8080 osprey-streamable-mcp-server:demo
+```
+
+### Using Streamable MCP Tools
+
+```bash
+#!/bin/bash
+. "./osprey.sh"
+
+DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
+MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
+
+# Define the streamable HTTP MCP server endpoint
+MCP_SERVER="http://localhost:9090"
+
+# Get available tools from streamable MCP server
+MCP_TOOLS=$(get_mcp_http_tools "$MCP_SERVER")
+TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
+
+read -r -d '' DATA <<- EOM
+{
+  "model": "${MODEL}",
+  "options": {
+    "temperature": 0.0
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "Say hello to Bob and to Sam, make the sum of 5 and 37"
+    }
+  ],
+  "tools": ${TOOLS},
+  "parallel_tool_calls": true,
+  "tool_choice": "auto"
+}
+EOM
+
+# Make function call request
+RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
+TOOL_CALLS=$(get_tool_calls "${RESULT}")
+
+# Process tool calls with streaming support
+for tool_call in $TOOL_CALLS; do
+    FUNCTION_NAME=$(get_function_name "$tool_call")
+    FUNCTION_ARGS=$(get_function_args "$tool_call")
+        
+    # Execute function via MCP
+    MCP_RESPONSE=$(call_mcp_http_tool "$MCP_SERVER" "$FUNCTION_NAME" "$FUNCTION_ARGS")
+    RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
+    
+    echo "Function result: $RESULT_CONTENT"
+done
+```
+
+### Benefits of Streamable HTTP Transport
+
+- **HTTP Standards**: Leverages standard HTTP streaming protocols
+- **Scalability**: Easier to deploy and scale than STDIO servers
 
 ## Using Docker MCP Gateway
 
