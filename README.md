@@ -34,13 +34,15 @@ Source the library in your script:
 DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
 MODEL="ai/qwen2.5:latest"
 
-DATA='{
+read -r -d '' DATA <<- EOM
+{
   "model":"'${MODEL}'",
   "messages": [
     {"role":"user", "content": "Hello, how are you?"}
   ],
   "stream": false
-}'
+}
+EOM
 
 response=$(osprey_chat ${DMR_BASE_URL} "${DATA}")
 echo "${response}"
@@ -51,13 +53,15 @@ echo "${response}"
 DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
 MODEL="ai/qwen2.5:latest"
 
-DATA='{
+read -r -d '' DATA <<- EOM
+{
   "model":"'${MODEL}'",
   "messages": [
     {"role":"user", "content": "Hello, how are you?"}
   ],
   "stream": true
-}'
+}
+EOM
 
 function callback() {
   echo -n "$1" 
@@ -72,7 +76,8 @@ DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
 MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
 
 # Define your tools in JSON format
-TOOLS='[
+read -r -d '' TOOLS <<- EOM
+[
   {
     "type": "function",
     "function": {
@@ -88,16 +93,19 @@ TOOLS='[
       }
     }
   }
-]'
+]
+EOM
 
-DATA='{
+read -r -d '' DATA <<- EOM
+{
   "model":"'${MODEL}'",
   "messages": [
     {"role":"user", "content": "Calculate the sum of 5 and 10"}
   ],
   "tools": '${TOOLS}',
   "tool_choice": "auto"
-}'
+}
+EOM
 
 # Make the function call request
 response=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
@@ -119,6 +127,33 @@ for tool_call in $TOOL_CALLS; do
             ;;
     esac
 done
+```
+
+**Note on Parallel Tool Calls**: The `parallel_tool_calls` parameter enables models to make multiple function calls simultaneously. However, only a few local models support this feature effectively:
+- `hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m`
+- `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_m`
+- `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s`
+- `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q3_k_l`
+
+Example with parallel tool calls:
+```bash
+read -r -d '' DATA <<- EOM
+{
+  "model": "${MODEL}",
+  "options": {
+    "temperature": 0.0
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "Say hello to Bob and to Sam, make the sum of 5 and 37"
+    }
+  ],
+  "tools": ${TOOLS},
+  "parallel_tool_calls": true,
+  "tool_choice": "auto"
+}
+EOM
 ```
 
 See the `examples/` directory for more detailed usage examples including conversation memory management.
@@ -198,11 +233,17 @@ while true; do
   build_messages_array
   
   # Create API request with conversation history
-  DATA='{
-    "model":"'${MODEL}'",
-    "messages": ['${MESSAGES}'],
-    "stream": true
-  }'
+  read -r -d '' DATA <<- EOM
+{
+  "model":"${MODEL}",
+  "options": {
+    "temperature": 0.5,
+    "repeat_last_n": 2
+  },
+  "messages": [${MESSAGES}],
+  "stream": true
+}
+EOM
   
   ASSISTANT_RESPONSE=""
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
