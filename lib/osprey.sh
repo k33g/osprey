@@ -463,3 +463,157 @@ function get_tool_content() {
     # Extract the content text from the tool call response
     echo "$response" | jq -r '.[] | select(.id == 2) | .result.content[0].text'
 }
+
+: <<'COMMENT'
+get_tool_content_http - Extracts the text content from an MCP HTTP tool call response.
+
+Args:
+    response (str): The JSON response from call_mcp_http_tool function.
+
+Returns:
+    str: The text content from the tool call result.
+COMMENT
+function get_tool_content_http() {
+    local response="$1"
+    
+    if [ -z "$response" ]; then
+        echo "Error: Response is required" >&2
+        return 1
+    fi
+    
+    # Extract the content text from the HTTP tool call response
+    echo "$response" | jq -r '.result.content[0].text'
+}
+
+: <<'COMMENT'
+get_mcp_http_tools - Gets the tools list from an MCP HTTP server by sending the proper initialization sequence.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+
+Returns:
+    str: JSON array of tools from the MCP HTTP server.
+COMMENT
+function get_mcp_http_tools() {
+    local mcp_server_url="$1"
+    
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+    
+    # STEP 1: Initialize the server and get session ID
+    local init_data='{
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "id": "init-uuid",
+        "params": {
+            "protocolVersion": "2024-11-05"
+        }
+    }'
+    
+    # Get the session ID from headers
+    local session_id=$(curl -i -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$init_data" \
+        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
+    
+    if [ -z "$session_id" ]; then
+        echo "Error: Failed to get session ID from MCP server" >&2
+        return 1
+    fi
+    
+    # STEP 2: Get tools list using the session ID
+    local tools_data='{
+        "jsonrpc": "2.0",
+        "id": "tools-list",
+        "method": "tools/list",
+        "params": {}
+    }'
+    
+    # Get tools list
+    local result=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Mcp-Session-Id: $session_id" \
+        -d "$tools_data" \
+        "$mcp_server_url/mcp" | jq -r '.result.tools')
+    
+    # Return the tools list
+    echo "$result"
+}
+
+: <<'COMMENT'
+call_mcp_http_tool - Calls an MCP tool on an HTTP server by sending the proper initialization sequence and tool call request.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+    tool_name (str): The name of the tool to call.
+    tool_arguments (str): JSON string of arguments to pass to the tool.
+
+Returns:
+    str: Complete JSON response from the MCP HTTP server including the tool call result.
+COMMENT
+function call_mcp_http_tool() {
+    local mcp_server_url="$1"
+    local tool_name="$2"
+    local tool_arguments="$3"
+    
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$tool_name" ]; then
+        echo "Error: Tool name is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$tool_arguments" ]; then
+        tool_arguments="{}"
+    fi
+    
+    # STEP 1: Initialize the server and get session ID
+    local init_data='{
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "id": "init-uuid",
+        "params": {
+            "protocolVersion": "2024-11-05"
+        }
+    }'
+    
+    # Get the session ID from headers
+    local session_id=$(curl -i -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$init_data" \
+        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
+    
+    if [ -z "$session_id" ]; then
+        echo "Error: Failed to get session ID from MCP server" >&2
+        return 1
+    fi
+    
+    # STEP 2: Call the tool using the session ID
+    local call_data=$(cat << EOF
+{
+    "jsonrpc": "2.0",
+    "id": "tool-call",
+    "method": "tools/call",
+    "params": {
+        "name": "$tool_name",
+        "arguments": $tool_arguments
+    }
+}
+EOF
+)
+    
+    # Call the tool and return the complete response
+    local result=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Mcp-Session-Id: $session_id" \
+        -d "$call_data" \
+        "$mcp_server_url/mcp")
+    
+    # Return the response
+    echo "$result"
+}
