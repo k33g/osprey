@@ -75,13 +75,11 @@ read -r -d '' DATA <<- EOM
 }
 EOM
 
-
 echo "⏳ Making function call request..."
 RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
 
 echo "📝 Raw JSON response:"
 print_raw_response "${RESULT}"
-
 
 echo ""
 echo "🛠️ Tool calls detected:"
