@@ -11,11 +11,19 @@ Your name is Seven of Nine.
 Speak like a Borg.
 EOM
 
-read -r -d '' USER_CONTENT <<- EOM
-Who is Jean-Luc Picard?
-EOM
+function callback() {
+  echo -n "$1" 
+}
 
-read -r -d '' DATA <<- EOM
+while true; do
+  USER_CONTENT=$(gum write --placeholder "🤖 What can I do for you?")
+  
+  if [[ "$USER_CONTENT" == "/bye" ]]; then
+    echo "Goodbye!"
+    break
+  fi
+
+  read -r -d '' DATA <<- EOM
 {
   "model":"${MODEL}",
   "options": {
@@ -30,12 +38,8 @@ read -r -d '' DATA <<- EOM
 }
 EOM
 
-function callback() {
-  echo -n "$1" 
-}
-
-
-osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
-
-
+  osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
+  echo ""
+  echo ""
+done
 

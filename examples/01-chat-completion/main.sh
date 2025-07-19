@@ -16,9 +16,6 @@ read -r -d '' USER_CONTENT <<- EOM
 Who is Jean-Luc Picard?
 EOM
 
-SYSTEM_CONTENT=$(RemoveNewlines "${SYSTEM_CONTENT}")
-USER_CONTENT=$(RemoveNewlines "${USER_CONTENT}")
-
 
 read -r -d '' DATA <<- EOM
 {
@@ -36,8 +33,7 @@ read -r -d '' DATA <<- EOM
 }
 EOM
 
-jsonResult=$(Chat "${DMR_BASE_URL}" "${DATA}" | tail -1)
+completion=$(osprey_chat ${DMR_BASE_URL} "${DATA}")
+echo "${completion}" 
 
-messageContent=$(echo "${jsonResult}" | jq '.choices[0].message.content')
 
-echo "${messageContent}" 
