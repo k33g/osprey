@@ -107,25 +107,31 @@ Conversation memory management functions for handling chat history.
 COMMENT
 
 function add_user_message() {
-  local user_content="$1"
-  CONVERSATION_HISTORY+=("{\"role\":\"user\", \"content\": \"${user_content//\"/\\\"}\"}")
+  local conversation_history_var="$1"
+  local user_content="$2"
+  eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"user\\\", \\\"content\\\": \\\"${user_content//\"/\\\\\\\"}\\\"}\")"
 }
 
 function add_assistant_message() {
-  local assistant_content="$1"
-  CONVERSATION_HISTORY+=("{\"role\":\"assistant\", \"content\": \"${assistant_content//\"/\\\"}\"}")
+  local conversation_history_var="$1"
+  local assistant_content="$2"
+  eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"assistant\\\", \\\"content\\\": \\\"${assistant_content//\"/\\\\\\\"}\\\"}\")"
 }
 
 function add_system_message() {
-  local system_content="$1"
-  CONVERSATION_HISTORY+=("{\"role\":\"system\", \"content\": \"${system_content//\"/\\\"}\"}")
+  local conversation_history_var="$1"
+  local system_content="$2"
+  eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"system\\\", \\\"content\\\": \\\"${system_content//\"/\\\\\\\"}\\\"}\")"
 }
 
 function build_messages_array() {
-  MESSAGES="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
-  for msg in "${CONVERSATION_HISTORY[@]}"; do
-    MESSAGES="${MESSAGES}, ${msg}"
+  local conversation_history_var="$1"
+  local messages="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
+  eval "local conversation_history_array=(\"\${${conversation_history_var}[@]}\")"
+  for msg in "${conversation_history_array[@]}"; do
+    messages="${messages}, ${msg}"
   done
+  echo "${messages}"
 }
 
 function clear_conversation_history() {

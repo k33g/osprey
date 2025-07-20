@@ -1,3 +1,7 @@
+# This Dockerfile is to test osprey in a development environment.
+# To use it copy osprey.sh to the same directory as this Dockerfile.
+# It will be used to run osprey commands in the container.
+
 FROM debian:stable-slim
 
 ARG OSPREY_VERSION=${OSPREY_VERSION}
@@ -21,10 +25,9 @@ WORKDIR /app
 
 # Copy the main script
 COPY main.sh /app/main.sh
+COPY osprey.sh /app/osprey.sh
 
-# Download and install osprey.sh
 RUN <<EOF
-curl -fsSL https://github.com/k33g/osprey/releases/download/${OSPREY_VERSION}/osprey.sh -o ./osprey.sh
 chmod +x ./osprey.sh
 chmod +x /app/main.sh
 EOF

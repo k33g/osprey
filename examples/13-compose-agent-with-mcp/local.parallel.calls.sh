@@ -1,5 +1,4 @@
 #!/bin/bash
-#. "./osprey.sh"
 . "../../lib/osprey.sh"
 
 : <<'COMMENT'
@@ -93,15 +92,13 @@ EOM
   fi
 
   # Add tool calls results to system message
-  add_system_message "$TOOL_CALLS_RESULTS"
+  add_system_message CONVERSATION_HISTORY "${TOOL_CALLS_RESULTS}"
 
   # Add user message to conversation history
-  #add_user_message "$TOOL_CALLS_RESULTS $USER_CONTENT"
-  add_user_message "$USER_CONTENT"
-
+  add_user_message CONVERSATION_HISTORY "${USER_CONTENT}"
   
   # Build messages array with system message and conversation history
-  build_messages_array
+  MESSAGES=$(build_messages_array CONVERSATION_HISTORY)
 
   read -r -d '' DATA <<- EOM
 {
@@ -120,8 +117,8 @@ EOM
   
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
   
-  # Add assistant response to conversation history
-  add_assistant_message "$ASSISTANT_RESPONSE"
+  # Add assistant response to conversation history (from callback)
+  add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_RESPONSE}"
   
   echo ""
   echo ""
