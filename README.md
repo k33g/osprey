@@ -413,7 +413,7 @@ models:
 #!/bin/bash
 . "./osprey.sh"
 
-# Initialize conversation
+# Initialize conversation history array
 CONVERSATION_HISTORY=()
 
 function callback() {
@@ -428,8 +428,11 @@ while true; do
     break
   fi
 
-  add_user_message "$USER_CONTENT"
-  build_messages_array
+  # Add user message to conversation history
+  add_user_message CONVERSATION_HISTORY "${USER_CONTENT}"
+
+  # Build messages array with conversation history
+  MESSAGES=$(build_messages_array CONVERSATION_HISTORY)
   
   # Create API request with conversation history
   read -r -d '' DATA <<- EOM
@@ -446,7 +449,9 @@ EOM
   
   ASSISTANT_RESPONSE=""
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
-  add_assistant_message "$ASSISTANT_RESPONSE"
+  
+  # Add assistant response to conversation history
+  add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_RESPONSE}"
   
   echo -e "\n"
 done
