@@ -1,8 +1,20 @@
 #!/bin/bash
 . "../../lib/osprey.sh"
 
+: <<'COMMENT'
+✋ if you are running this script in a Docker container, 
+you need to export the MODEL_RUNNER_BASE_URL environment variable to point to the model runner service.
+export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
+
+✋ if you are working with devcontainer, it's already set.
+
+✋✋✋ To run this example running on linux, you need to install the mcp-gateway plugin.
+👀 https://github.com/docker/mcp-gateway?tab=readme-ov-file#install-as-docker-cli-plugin
+COMMENT
+
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_CHAT_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+#MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m"}
 
 docker model pull ${MODEL}
 
@@ -16,13 +28,11 @@ MCP_TOOLS=$(get_mcp_tools "$SERVER_CMD")
 # echo "${MCP_TOOLS}"
 # echo "---------------------------------------------------------"
 
-#TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
 # Transform tools to OpenAI format with filtering
 # This will only include tools that match the filter criteria
 # For example, if you want to filter tools that contain "search" or "fetch"
-TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
-#TOOLS=$(transform_to_openai_format "${MCP_TOOLS}")
-
+TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
+#TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
 
 read -r -d '' DATA <<- EOM
 {

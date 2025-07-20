@@ -1,39 +1,41 @@
 #!/bin/bash
-. "../../lib/osprey.sh"
+. "./osprey.sh"
 
-DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_CHAT_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+DMR_BASE_URL=${MODEL_RUNNER_BASE_URL}
+TOOLS_MODEL=${MODEL_RUNNER_TOOLS_MODEL}
 
-docker model pull ${MODEL}
+#MCP_SERVER=${MCP_SERVER:-"http://localhost:9090"}
 
-MCP_SERVER=${MCP_SERVER:-"http://localhost:9090"}
-
-
+# === Get the list of tools from the MCP server ===
 MCP_TOOLS=$(get_mcp_http_tools "$MCP_SERVER")
 TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
 
-# echo "---------------------------------------------------------"
-# echo "Available tools:"
-# echo "${TOOLS}" 
-# echo "---------------------------------------------------------"
+echo "---------------------------------------------------------"
+echo "Available tools:"
+echo "${TOOLS}" 
+echo "---------------------------------------------------------"
+echo "Using tools model: ${TOOLS_MODEL}"
+echo "Using model runner: ${DMR_BASE_URL}"
+echo "Using MCP server: ${MCP_SERVER}"
+osprey_version
+jq --version
+echo "---------------------------------------------------------"
 
-: <<'COMMENT'
-Examples of request with function calling:
-Say Hello to Bob
-Calculate the sum of 5 and 10
-COMMENT
+read -r -d '' USER_CONTENT <<- EOM
+Say hello to Bob and to Sam, make the sum of 5 and 37
+EOM
 
-
+# === First, detect tool calls in the user input ===
 read -r -d '' DATA <<- EOM
 {
-  "model": "${MODEL}",
+  "model": "${TOOLS_MODEL}",
   "options": {
     "temperature": 0.0
   },
   "messages": [
     {
       "role": "user",
-      "content": "Say hello to Bob and to Sam, make the sum of 5 and 37"
+      "content": "${USER_CONTENT}"
     }
   ],
   "tools": ${TOOLS},
@@ -44,7 +46,6 @@ EOM
 
 echo "⏳ Making function call request..."
 RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
-
 echo "📝 Raw JSON response:"
 print_raw_response "${RESULT}"
 
@@ -55,6 +56,7 @@ print_tool_calls "${RESULT}"
 # Get tool calls for further processing
 TOOL_CALLS=$(get_tool_calls "${RESULT}")
 
+# Execute tool calls if any
 if [[ -n "$TOOL_CALLS" ]]; then
     echo ""
     echo "🚀 Processing tool calls..."
@@ -71,7 +73,9 @@ if [[ -n "$TOOL_CALLS" ]]; then
         RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
         
         echo "Function result: $RESULT_CONTENT"
+        
     done
 else
     echo "No tool calls found in response"
 fi
+

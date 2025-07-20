@@ -1,0 +1,20 @@
+services:
+  seven-of-nine-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - OSPREY_VERSION=v0.0.4
+    tty: true          # Enable TTY
+    stdin_open: true   # Keep stdin open
+
+    models:
+      tools_model:
+        endpoint_var: MODEL_RUNNER_BASE_URL
+        model_var: MODEL_RUNNER_TOOL_MODEL
+
+models:
+  tools_model:
+    #model: hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s
+    model: hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m
+

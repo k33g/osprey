@@ -1,8 +1,17 @@
 #!/bin/bash
 . "../../lib/osprey.sh"
 
+: <<'COMMENT'
+✋ if you are running this script in a Docker container, 
+you need to export the MODEL_RUNNER_BASE_URL environment variable to point to the model runner service.
+export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
+
+✋ if you are working with devcontainer, it's already set.
+COMMENT
+
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_CHAT_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+#MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m"}
 
 docker model pull ${MODEL}
 
