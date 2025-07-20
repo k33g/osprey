@@ -2,5 +2,5 @@
 
 ```bash
 docker compose up --build -d
-docker attach $(docker compose ps -q seven-of-nine-agent)
+docker attach $(docker compose ps -q calc-agent)
 ```

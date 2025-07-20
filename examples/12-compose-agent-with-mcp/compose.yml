@@ -1,10 +1,11 @@
 services:
-  tools-agent:
+  mcp-tools-agent:
     build:
       context: .
       dockerfile: Dockerfile
+      #dockerfile: Dockerfile.dev
       args:
-        - OSPREY_VERSION=v0.0.4
+        - OSPREY_VERSION=v0.0.5
     tty: true          # Enable TTY
     stdin_open: true   # Keep stdin open
     environment:

@@ -1,17 +1,18 @@
 services:
-  seven-of-nine-agent:
+  tools-agent:
     build:
       context: .
       dockerfile: Dockerfile
+      #dockerfile: Dockerfile.dev
       args:
-        - OSPREY_VERSION=v0.0.4
+        - OSPREY_VERSION=v0.0.5
     tty: true          # Enable TTY
     stdin_open: true   # Keep stdin open
 
     models:
       tools_model:
         endpoint_var: MODEL_RUNNER_BASE_URL
-        model_var: MODEL_RUNNER_TOOL_MODEL
+        model_var: MODEL_RUNNER_TOOLS_MODEL
 
 models:
   tools_model:

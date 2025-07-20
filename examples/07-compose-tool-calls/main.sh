@@ -1,5 +1,4 @@
 #!/bin/bash
-#. "../../lib/osprey.sh"
 . "./osprey.sh"
 
 : <<'COMMENT'
@@ -11,7 +10,7 @@ export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.c
 COMMENT
 
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL}
-MODEL=${MODEL_RUNNER_TOOL_MODEL}
+MODEL=${MODEL_RUNNER_TOOLS_MODEL}
 
 # Example tools catalog in JSON format
 read -r -d '' TOOLS <<- EOM

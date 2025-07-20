@@ -25,7 +25,7 @@ This example demonstrates how to create a containerized AI chatbot using Docker 
 ### Option 1: Run with Docker Compose (Recommended)
 
 ```bash
-docker compose up --build -d
+docker compose up --build -d --no-log-prefix 
 docker attach $(docker compose ps -q seven-of-nine-agent)
 ```
 
