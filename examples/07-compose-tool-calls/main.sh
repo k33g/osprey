@@ -1,5 +1,6 @@
 #!/bin/bash
-. "../../lib/osprey.sh"
+#. "../../lib/osprey.sh"
+. "./osprey.sh"
 
 : <<'COMMENT'
 ✋ if you are running this script in a Docker container, 
@@ -9,11 +10,8 @@ export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.c
 ✋ if you are working with devcontainer, it's already set.
 COMMENT
 
-DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-#MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
-MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m"}
-
-docker model pull ${MODEL}
+DMR_BASE_URL=${MODEL_RUNNER_BASE_URL}
+MODEL=${MODEL_RUNNER_TOOL_MODEL}
 
 # Example tools catalog in JSON format
 read -r -d '' TOOLS <<- EOM

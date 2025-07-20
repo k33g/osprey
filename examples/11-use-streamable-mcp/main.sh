@@ -10,55 +10,21 @@ export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.c
 COMMENT
 
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-#MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"}
+#MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_m"}
 MODEL=${MODEL_RUNNER_TOOL_MODEL:-"hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m"}
 
 docker model pull ${MODEL}
 
-# Example tools catalog in JSON format
-read -r -d '' TOOLS <<- EOM
-[
-  {
-    "type": "function",
-    "function": {
-      "name": "calculate_sum",
-      "description": "Calculate the sum of two numbers",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "a": {
-            "type": "number",
-            "description": "The first number"
-          },
-          "b": {
-            "type": "number",
-            "description": "The second number"
-          }
-        },
-        "required": ["a", "b"]
-      }
-    }
-  },
-  {
-    "type": "function",
-    "function": {
-      "name": "say_hello",
-      "description": "Say hello to the given name",
-      "parameters": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "The name to greet"
-          }
-        },
-        "required": ["name"]
-      }
-    }
-  }
-]
-EOM
+MCP_SERVER=${MCP_SERVER:-"http://localhost:9090"}
 
+
+MCP_TOOLS=$(get_mcp_http_tools "$MCP_SERVER")
+TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
+
+# echo "---------------------------------------------------------"
+# echo "Available tools:"
+# echo "${TOOLS}" 
+# echo "---------------------------------------------------------"
 
 : <<'COMMENT'
 Examples of request with function calling:
@@ -109,23 +75,9 @@ if [[ -n "$TOOL_CALLS" ]]; then
         
         echo "Executing function: $FUNCTION_NAME with args: $FUNCTION_ARGS"
         
-        # Simulate function execution
-        case "$FUNCTION_NAME" in
-            "say_hello")
-                NAME=$(echo "$FUNCTION_ARGS" | jq -r '.name')
-                HELLO="👋 Hello, $NAME!🙂"
-                RESULT_CONTENT="{\"message\": $HELLO}"
-                ;;
-            "calculate_sum")
-                A=$(echo "$FUNCTION_ARGS" | jq -r '.a')
-                B=$(echo "$FUNCTION_ARGS" | jq -r '.b')
-                SUM=$((A + B))
-                RESULT_CONTENT="{\"result\": $SUM}"
-                ;;
-            *)
-                RESULT_CONTENT="{\"error\": \"Unknown function\"}"
-                ;;
-        esac
+        # Execute function via MCP
+        MCP_RESPONSE=$(call_mcp_http_tool "$MCP_SERVER" "$FUNCTION_NAME" "$FUNCTION_ARGS")
+        RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
         
         echo "Function result: $RESULT_CONTENT"
     done
