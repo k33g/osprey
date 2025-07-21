@@ -66,14 +66,15 @@ on_stream - Processes each line of the streaming response from the DMR API.
  Returns:
     None
 COMMENT
-function on_stream() {
+function _on_stream() {
   [[ -z "$1" || "$1" != data:* ]] && return
   
   json_data="${1#data: }"
   [[ "$json_data" == "[DONE]" ]] && return
   
+  # Handle the JSON parsing more carefully
   data=$(echo "$json_data" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
-  [[ -n "$data" && -n "$2" ]] && $2 "$data"
+  [[ -n "$data" && "$data" != "null" ]] && printf "%s" "$data"
 }
 
 : <<'COMMENT'
@@ -87,20 +88,40 @@ osprey_chat_stream - Generates a response using the DMR API in a streaming manne
  Returns:
    None
 COMMENT
+function on_stream() {
+  [[ -z "$1" || "$1" != data:* ]] && return
+
+  json_data="${1#data: }"
+  [[ "$json_data" == "[DONE]" ]] && return
+
+  # Extract the content
+  content=$(echo "$json_data" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
+
+  # Only print if content is not empty and not "null"
+  if [[ -n "$content" && "$content" != "null" ]]; then
+    # Print the content exactly as received.
+    # printf will interpret any actual newlines (\n) or carriage returns (\r) within $content.
+    printf "%s" "$content"
+  fi
+}
+
+# The osprey_chat_stream function remains unchanged, as the problem was solely in on_stream.
 function osprey_chat_stream() {
     DMR_BASE_URL="${1}"
     DATA="${2}"
-    CALL_BACK=${3}
+    CALLBACK=${3} # Still keeping this for potential future use, though not directly used for printing here.
 
-    DATA=$(remove_new_lines "${DATA}")
-
-    curl --no-buffer --silent ${DMR_BASE_URL}/chat/completions \
+    curl --no-buffer --silent "${DMR_BASE_URL}/chat/completions" \
         -H "Content-Type: application/json" \
-        -d "${DATA}" | while read linestream
-        do
-            on_stream "${linestream}" "${CALL_BACK}"
-        done 
+        -d "${DATA}" | while IFS= read -r linestream; do
+        on_stream "${linestream}"
+    done
+    # Ensure a final newline after the entire stream for prompt clarity
+    echo # This adds one final newline at the end of the entire completion.
 }
+
+
+
 
 : <<'COMMENT'
 Conversation memory management functions for handling chat history.

@@ -54,18 +54,11 @@ read -r -d '' DATA <<- EOM
     {"role":"system", "content": ${SYSTEM_INSTRUCTIONS_ESCAPED}},
     {"role":"system", "content": ${SOURCE_CODE_ESCAPED}},
     {"role":"user", "content": ${USER_CONTENT_ESCAPED}}
-  ],
-  "stream": true
+  ]
 }
 EOM
 
-function callback() {
-  echo -n "$1" 
-}
-
-osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
-
-echo ""
-echo ""
+completion=$(osprey_chat ${DMR_BASE_URL} "${DATA}")
+echo "${completion}" 
 
 

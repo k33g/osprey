@@ -10,4 +10,6 @@
 
 ```bash
 ./main.sh ./src/test1_api_keys.js
+./main.sh ./src/test2_database.py
+
 ```
