@@ -11,5 +11,7 @@
 ```bash
 ./main.sh ./src/test1_api_keys.js
 ./main.sh ./src/test2_database.py
+./main.sh ./src/test4_private_keys.go
 
+./main.sh ./src/test5_mixed_secrets.rb
 ```

@@ -54,13 +54,13 @@ Found X secret(s) in the analyzed code.
 
 ### Secret 1
 - **Type**: API_KEY
-- **Location**: Line 1, variable 'openaiApiKey'  
+- **Location**: variable 'openaiApiKey'  
 - **Value**: `sk-12345...cdef` (redacted)
 - **Risk Level**: HIGH
 
 ### Secret 2  
 - **Type**: TOKEN
-- **Location**: Line 2, variable 'authToken'
+- **Location**: variable 'authToken'
 - **Value**: `ghp_12345...5678` (redacted)
 - **Risk Level**: HIGH
 
@@ -98,7 +98,7 @@ Found 1 secret(s) in the analyzed code.
 
 ### Secret 1
 - **Type**: API_KEY
-- **Location**: Line 1, variable 'apiKey'
+- **Location**: variable 'apiKey'
 - **Value**: `sk-12345...cdef` (redacted)
 - **Risk Level**: HIGH
 

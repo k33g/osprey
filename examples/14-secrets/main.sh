@@ -47,7 +47,7 @@ read -r -d '' DATA <<- EOM
 {
   "model":"${MODEL}",
   "options": {
-    "temperature": 0.5,
+    "temperature": 0.0,
     "repeat_last_n": 2
   },
   "messages": [

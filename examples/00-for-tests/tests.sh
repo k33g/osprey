@@ -1,9 +1,12 @@
 #!/bin/bash
 
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:0.5B-F16"}
+#MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:0.5B-F16"}
+MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:latest"}
+docker model pull ${MODEL}
+#DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:11434/v1}
+#MODEL=${MODEL_RUNNER_CHAT_MODEL:-"qwen2.5:latest"}
 
-docker model pull ${MODEL}  
 
 read -r -d '' SYSTEM_INSTRUCTION <<- EOM
 You are a Golang expert.
@@ -33,7 +36,7 @@ function remove_new_lines() {
     echo "${CONTENT}"
 }
 
-function saved_on_stream() {
+function on_stream() {
   [[ -z "$1" || "$1" != data:* ]] && return
   
   json_data="${1#data: }"
@@ -43,22 +46,6 @@ function saved_on_stream() {
   [[ -n "$data" && -n "$2" ]] && $2 "$data"
 }
 
-function on_stream() {
-  [[ -z "$1" || "$1" != data:* ]] && return
-  
-  json_data="${1#data: }"
-  [[ "$json_data" == "[DONE]" ]] && return
-  
-
-  #echo "$json_data" | jq -r '.choices[0].delta.content // empty' 2>/dev/null
-  echo "$json_data" | jq -r '.choices[0].delta.content // empty'
-
-
-  # data=$(echo "$json_data" | jq -r '.choices[0].delta.content')
-  # echo -n "$data"
-  # data=$(echo "$json_data" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
-  # [[ -n "$data" && -n "$2" ]] && $2 "$data"
-}
 
 function osprey_chat_stream() {
     DMR_BASE_URL="${1}"
@@ -71,15 +58,14 @@ function osprey_chat_stream() {
         -H "Content-Type: application/json" \
         -d "${DATA}" | while read linestream
         do
-            on_stream "${linestream}" "${CALL_BACK}"
+            #on_stream "${linestream}" "${CALL_BACK}"
+            ${CALL_BACK} "${linestream}"
         done 
 }
 
 function callback() {
   echo -n "$1" 
 }
-
-#echo "Using DATA: ${DATA}"
 
 osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
 
