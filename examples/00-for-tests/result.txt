@@ -1,0 +1,160 @@
+Using cached model: 948.10 MB
+Using DATA: {
+  "model":"ai/qwen2.5:0.5B-F16",
+  "options": {
+    "temperature": 0.5
+  },
+  "messages": [
+    {"role":"system", "content": "You are a Golang expert."},
+    {"role":"user", "content": "Generate a Golang Hello World program."}
+  ],
+  "stream": true
+}
+Certainly
+!
+ Below
+ is
+ a
+ simple
+ G
+olang
+ program
+ that
+ prints
+Hello
+,
+ World
+ to
+ the
+ console
+:nn
+```
+go
+n
+package
+ main
+nn
+import
+fmt
+func
+ main
+()
+ {n
+   
+ fmt
+.Println
+Hello
+,
+ World
+}n
+``
+`nn
+To
+ compile
+ and
+ run
+ this
+ program
+,
+ you
+ can
+ use
+ the
+ following
+ commands
+:nn
+1
+.
+ Save
+ the
+ code
+ in
+ a
+ file
+ named
+ `
+main
+.go
+`.n
+2
+.
+ Open
+ a
+ terminal
+ or
+ command
+ prompt
+.n
+3
+.
+ Navigate
+ to
+ the
+ directory
+ where
+ you
+ saved
+ `
+main
+.go
+`.n
+4
+.
+ Run
+ the
+ following
+ commands
+:nn
+```
+sh
+n
+go
+ build
+ main
+.go
+n
+./
+main
+n
+``
+`nn
+This
+ will
+ generate
+ a
+ executable
+ file
+ named
+ `
+main
+`.
+ You
+ can
+ run
+ it
+ by
+ typing
+:nn
+```
+sh
+n
+./
+main
+n
+``
+`nn
+You
+ should
+ see
+ the
+ output
+:nn
+``
+`n
+Hello
+,
+ World
+!n
+```
+
+
