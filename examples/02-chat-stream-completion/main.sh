@@ -40,7 +40,7 @@ read -r -d '' DATA <<- EOM
 EOM
 
 function callback() {
-  echo -n "$1" 
+  echo -ne "$1" 
 }
 
 osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback

@@ -56,24 +56,35 @@ function osprey_chat() {
 }
 
 : <<'COMMENT'
-on_stream - Processes each line of the streaming response from the DMR API.
- It checks if the line starts with "data:", extracts the content, and calls the callback function.
+remove_quotes - Removes leading and trailing quotes from a string.
 
  Args:
-    linestream (str): The line of data from the stream.
-    CALL_BACK (function): The callback function to handle the processed data.
+    str (str): The string to remove quotes from.
 
  Returns:
-    None
+    str: The string without leading and trailing quotes.
+
 COMMENT
-function on_stream() {
-  [[ -z "$1" || "$1" != data:* ]] && return
-  
-  json_data="${1#data: }"
-  [[ "$json_data" == "[DONE]" ]] && return
-  
-  data=$(echo "$json_data" | jq -r '.choices[0].delta.content // empty' 2>/dev/null)
-  [[ -n "$data" && -n "$2" ]] && $2 "$data"
+remove_quotes() {
+    local str="$1"
+    str="${str%\"}"   # remove " at the end
+    str="${str#\"}"   # remove " at start
+    echo "$str"
+}
+
+: <<'COMMENT'
+unescape_quotes - Unescapes quotes in a string by replacing \" with ".
+
+ Args:
+    str (str): The string to unescape quotes in.
+
+ Returns:
+    str: The string with unescaped quotes.
+COMMENT
+unescape_quotes() {
+    local str="$1"
+    str="${str//\\\"/\"}"  # Replace \" by "
+    echo "$str"
 }
 
 : <<'COMMENT'
@@ -83,6 +94,7 @@ osprey_chat_stream - Generates a response using the DMR API in a streaming manne
    - DMR_BASE_URL (str): The URL of the DMR API.
    - DATA (str): The JSON data to be sent to the API.
    - CALL_BACK (function): The callback function to handle each line of the response.
+   - REASONING_CONTENT (str): if =="display_reasoning" include reasoning content in the response.
 
  Returns:
    None
@@ -91,15 +103,50 @@ function osprey_chat_stream() {
     DMR_BASE_URL="${1}"
     DATA="${2}"
     CALL_BACK=${3}
+    REASONING_CONTENT=${4}
 
     DATA=$(remove_new_lines "${DATA}")
 
     curl --no-buffer --silent ${DMR_BASE_URL}/chat/completions \
         -H "Content-Type: application/json" \
-        -d "${DATA}" | while read linestream
-        do
-            on_stream "${linestream}" "${CALL_BACK}"
-        done 
+        -d "${DATA}" \
+        | while IFS= read -r line; do
+            #echo "📝 $line"
+            if [[ $line == data:* ]]; then
+            
+                json_data="${line#data: }"
+                if [[ $json_data != "[DONE]" ]]; then
+
+                    # prettyprint
+                    #echo "$json_data" | jq .
+
+                    # Extract content if it exists, else return "null"
+                    content_chunk=$(echo "$json_data" | jq '.choices[0].delta.content // "null"' 2>/dev/null)
+
+                    if [[ "$REASONING_CONTENT" == "display_reasoning" ]]; then
+                        # Extract reasoning_content if it exists, else return "null"
+                        reasoning_chunk=$(echo "$json_data" | jq '.choices[0].delta.reasoning_content // "null"' 2>/dev/null)
+                        if [[ "$reasoning_chunk" != "\"null\"" ]]; then
+                            #echo "🧠 Reasoning: $reasoning_chunk"
+                            result=$(remove_quotes "$reasoning_chunk")
+                            clean_result=$(unescape_quotes "$result")
+                            #echo -ne "$clean_result"
+                            $CALL_BACK "$clean_result"
+                        fi
+                    fi
+
+                    if [[ "$content_chunk" != "\"null\"" ]]; then
+                        #echo "📝 Content: $content_chunk" 
+                        result=$(remove_quotes "$content_chunk")
+                        clean_result=$(unescape_quotes "$result")
+                        #echo -ne "$clean_result"
+                        $CALL_BACK "$clean_result"
+                    fi
+
+                fi
+            fi
+        done        
+        
 }
 
 : <<'COMMENT'

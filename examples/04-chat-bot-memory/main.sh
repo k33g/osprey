@@ -24,10 +24,13 @@ EOM
 CONVERSATION_HISTORY=()
 
 function callback() {
-  echo -n "$1"
+  echo -ne "$1"
   # Accumulate assistant response
   ASSISTANT_RESPONSE+="$1"
 }
+
+add_system_message CONVERSATION_HISTORY "${SYSTEM_INSTRUCTION}"
+
 
 while true; do
   USER_CONTENT=$(gum write --placeholder "🤖 What can I do for you [/bye to exit]?")
@@ -37,14 +40,13 @@ while true; do
     break
   fi
 
-  # Add user message to conversation history
-  CONVERSATION_HISTORY+=("{\"role\":\"user\", \"content\": \"${USER_CONTENT//\"/\\\"}\"}")
-  
-  # Build messages array with system message and conversation history
-  MESSAGES="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
-  for msg in "${CONVERSATION_HISTORY[@]}"; do
-    MESSAGES="${MESSAGES}, ${msg}"
-  done
+
+  # Add a user message - pass the array name and the message content
+  add_user_message CONVERSATION_HISTORY "${USER_CONTENT}"
+
+  # Build and capture the messages array
+  MESSAGES=$(build_messages_array CONVERSATION_HISTORY)
+
 
   read -r -d '' DATA <<- EOM
 {
@@ -63,8 +65,8 @@ EOM
   
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
   
-  # Add assistant response to conversation history
-  CONVERSATION_HISTORY+=("{\"role\":\"assistant\", \"content\": \"${ASSISTANT_RESPONSE//\"/\\\"}\"}")
+  # Add assistant response to conversation history (from callback)
+  add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_RESPONSE}"
   
   echo ""
   echo ""

@@ -21,7 +21,7 @@ Speak like a Borg.
 EOM
 
 function callback() {
-  echo -n "$1" 
+  echo -ne "$1" 
 }
 
 while true; do

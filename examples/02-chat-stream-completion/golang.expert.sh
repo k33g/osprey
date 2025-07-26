@@ -10,7 +10,10 @@ export MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.c
 COMMENT
 
 DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v1}
-MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:latest"}
+#MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:latest"}
+MODEL=${MODEL_RUNNER_CHAT_MODEL:-"hf.co/menlo/lucy-128k-gguf:q4_k_m"}
+
+
 
 docker model pull ${MODEL}  
 
@@ -38,10 +41,10 @@ read -r -d '' DATA <<- EOM
 EOM
 
 function callback() {
-  echo -n "$1" 
+  echo -ne "$1" 
 }
 
-osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
+osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback display_reasoning
 
 echo ""
 echo ""

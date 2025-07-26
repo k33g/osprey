@@ -8,7 +8,7 @@ MODEL=${MODEL_RUNNER_CHAT_MODEL}
 CONVERSATION_HISTORY=()
 
 function callback() {
-  echo -n "$1"
+  echo -ne "$1"
   # Accumulate assistant response
   ASSISTANT_RESPONSE+="$1"
 }
