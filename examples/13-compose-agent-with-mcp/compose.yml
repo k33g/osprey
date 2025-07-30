@@ -38,5 +38,6 @@ models:
   chat_model:
     model: ai/qwen2.5:latest
   tools_model:
-    model: hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m
+    #model: hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m
     #model: hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s
+    model: hf.co/menlo/lucy-128k-gguf:q4_k_m
