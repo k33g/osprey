@@ -72,6 +72,7 @@ EOM
   # Add assistant response to conversation history (from callback)
   add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_RESPONSE}"
   
+  # For debugging purposes, print the conversation history
   echo -e "\n\n🟢 CONVERSATION_HISTORY: ${CONVERSATION_HISTORY[@]}\n"
 
   echo ""

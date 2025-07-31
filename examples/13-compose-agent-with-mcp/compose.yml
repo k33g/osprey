@@ -2,8 +2,8 @@ services:
   calc-agent:
     build:
       context: .
-      dockerfile: Dockerfile
-      #dockerfile: Dockerfile.dev
+      #dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
       args:
         - OSPREY_VERSION=v0.0.6
     tty: true          # Enable TTY
