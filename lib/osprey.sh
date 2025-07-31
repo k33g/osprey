@@ -88,6 +88,45 @@ unescape_quotes() {
 }
 
 : <<'COMMENT'
+escape_quotes_except_escaped - Escapes quotes in a string by replacing \" with \\"
+and " with \".
+
+ Args:
+    str (str): The string to escape quotes in.
+
+ Returns:
+    str: The string with escaped quotes.
+COMMENT
+function escape_quotes_except_escaped() {
+  local input="$1"
+  # Step 1: Replace all \" with \\"
+  local step1
+  step1=$(echo "$input" | sed 's/\\"/\\\\\\"/g')
+  # Step 2: Escape all remaining unescaped "
+  echo "$step1" | awk '
+    {
+      out = "";
+      i = 1;
+      while (i <= length($0)) {
+        c = substr($0, i, 1);
+        if (c == "\"") {
+          # If previous char is not a backslash, escape it
+          if (i == 1 || substr($0, i-1, 1) != "\\") {
+            out = out "\\" c;
+          } else {
+            out = out c;
+          }
+        } else {
+          out = out c;
+        }
+        i++;
+      }
+      print out;
+    }
+  '
+}
+
+: <<'COMMENT'
 osprey_chat_stream - Generates a response using the DMR API in a streaming manner.
 
  Args:
@@ -171,6 +210,21 @@ function add_system_message() {
   eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"system\\\", \\\"content\\\": \\\"${system_content//\"/\\\\\\\"}\\\"}\")"
 }
 
+function add_tool_calls_message() {
+  local conversation_history_var="$1"
+  local tool_calls="$2"
+  local decoded=$(decode_tool_call "$tool_calls")
+  local escaped_decoded=$(escape_quotes_except_escaped "$decoded")
+  eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"assistant\\\", \\\"tool_calls\\\": [${escaped_decoded}]}\")"
+}
+
+function add_tool_message() {
+  local conversation_history_var="$1"
+  local tool_call_id="$2"
+  local tool_content="$3"
+  eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"tool\\\", \\\"tool_call_id\\\": \\\"${tool_call_id//\"/\\\\\\\"}\\\", \\\"content\\\": \\\"${tool_content//\"/\\\\\\\"}\\\"}\")"
+}
+
 function build_messages_array() {
   local conversation_history_var="$1"
   local messages="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
@@ -222,6 +276,20 @@ function print_raw_response() {
     local result="$1"
     #echo "Raw JSON response:"
     echo "${result}" | jq '.'
+}
+
+: <<'COMMENT'
+get_finish_reason - Extracts the reason that the completion has for finishing.
+
+Args:
+    result (str): The reason for finishing.
+
+Returns:
+    str: the reason for finishing.
+COMMENT
+function get_finish_reason() {
+    local result="$1"
+    echo "${result}" | jq -r '.choices[0].finish_reason'
 }
 
 : <<'COMMENT'
