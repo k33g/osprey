@@ -13,8 +13,6 @@ DMR_BASE_URL=${MODEL_RUNNER_BASE_URL:-http://localhost:12434/engines/llama.cpp/v
 #MODEL=${MODEL_RUNNER_CHAT_MODEL:-"ai/qwen2.5:latest"}
 MODEL=${MODEL_RUNNER_CHAT_MODEL:-"hf.co/menlo/lucy-128k-gguf:q4_k_m"}
 
-
-
 docker model pull ${MODEL}  
 
 read -r -d '' SYSTEM_INSTRUCTION <<- EOM

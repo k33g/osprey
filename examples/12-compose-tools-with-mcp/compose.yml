@@ -29,4 +29,5 @@ services:
     
 models:
   tools_model:
-    model: hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m
+    #model: hf.co/salesforce/llama-xlam-2-8b-fc-r-gguf:q4_k_m
+    model: hf.co/menlo/lucy-128k-gguf:q4_k_m

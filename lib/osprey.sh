@@ -162,21 +162,34 @@ function add_user_message() {
 function add_assistant_message() {
   local conversation_history_var="$1"
   local assistant_content="$2"
+
   eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"assistant\\\", \\\"content\\\": \\\"${assistant_content//\"/\\\\\\\"}\\\"}\")"
+#   echo "🟪 conversation_history_var: ${conversation_history_var}"
+#   echo "🟪 assistant_content: ${assistant_content}"
 }
 
 function add_system_message() {
   local conversation_history_var="$1"
   local system_content="$2"
+
   eval "${conversation_history_var}+=(\"{\\\"role\\\":\\\"system\\\", \\\"content\\\": \\\"${system_content//\"/\\\\\\\"}\\\"}\")"
+#   echo "🟦 conversation_history_var: ${conversation_history_var}"
+#   echo "🟦 system_content: ${system_content}"
 }
 
 function build_messages_array() {
   local conversation_history_var="$1"
-  local messages="{\"role\":\"system\", \"content\": \"${SYSTEM_INSTRUCTION}\"}"
+  local messages=""
   eval "local conversation_history_array=(\"\${${conversation_history_var}[@]}\")"
+  
+  local first=true
   for msg in "${conversation_history_array[@]}"; do
-    messages="${messages}, ${msg}"
+    if [ "$first" = true ]; then
+      messages="${msg}"
+      first=false
+    else
+      messages="${messages}, ${msg}"
+    fi
   done
   echo "${messages}"
 }
