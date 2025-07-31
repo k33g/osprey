@@ -418,7 +418,8 @@ CONVERSATION_HISTORY=()
 
 function callback() {
   echo -ne "$1"
-  ASSISTANT_RESPONSE+="$1"
+  # Accumulate assistant response to a temporary file
+  echo -n "$1" >> /tmp/assistant_response.tmp
 }
 
 while true; do
@@ -446,10 +447,15 @@ while true; do
   "stream": true
 }
 EOM
-  
-  ASSISTANT_RESPONSE=""
+
+  # Clear assistant response for this turn
+  rm -f /tmp/assistant_response.tmp
+
   osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
-  
+
+  # Read the accumulated response from the temp file
+  ASSISTANT_RESPONSE=$(cat /tmp/assistant_response.tmp 2>/dev/null || echo "")
+
   # Add assistant response to conversation history
   add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_RESPONSE}"
   
