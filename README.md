@@ -1,6 +1,6 @@
 # Osprey
 
-**Osprey** is a lightweight Bash library for interacting with the DMR (**[Docker Model Runner](https://docs.docker.com/ai/model-runner/)**) API. It provides simple functions to perform chat completions, streaming responses, and conversation memory management with LLM models through OpenAI-compatible APIs.
+**Osprey** is a lightweight Bash library for interacting with the DMR (**[Docker Model Runner](https://docs.docker.com/ai/model-runner/)**) API. It provides simple functions to perform chat completions, streaming responses, and conversation memory management with LLM models through **OpenAI-compatible APIs** (so, you can use it with other LLMs servers).
 
 ## Features
 
@@ -47,6 +47,29 @@ EOM
 response=$(osprey_chat ${DMR_BASE_URL} "${DATA}")
 echo "${response}"
 ```
+
+### Basic Chat Completion with Ollama
+
+> Ollama provides an API compatible with OpenAI's chat completion endpoints. You can use Osprey to interact with Ollama models as follows:
+
+```bash
+BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434/v1}
+MODEL=${OLLAMA_CHAT_MODEL:-"qwen2.5:latest"}
+
+read -r -d '' DATA <<- EOM
+{
+  "model":"'${MODEL}'",
+  "messages": [
+    {"role":"user", "content": "Hello, how are you?"}
+  ],
+  "stream": false
+}
+EOM
+
+response=$(osprey_chat ${DMR_BASE_URL} "${DATA}")
+echo "${response}"
+```
+
 
 ### Streaming Chat
 ```bash
