@@ -56,8 +56,8 @@ EOM
   echo "⏳ Making function call request..."
   RESULT=$(osprey_tool_calls ${DMR_BASE_URL} "${DATA}")
 
-  echo "📝 Raw JSON response:"
-  print_raw_response "${RESULT}"
+  #echo "📝 Raw JSON response:"
+  #print_raw_response "${RESULT}"
 
   echo ""
   echo "🛠️ Tool calls detected:"
@@ -84,7 +84,7 @@ EOM
           MCP_RESPONSE=$(call_mcp_http_tool "$MCP_SERVER" "$FUNCTION_NAME" "$FUNCTION_ARGS")
           RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
           
-          echo "Function result: $RESULT_CONTENT"
+          echo -e "Function result: $RESULT_CONTENT\n\n"
           add_tool_message CONVERSATION_HISTORY "${CALL_ID}" "${RESULT_CONTENT}"
         done
       else
@@ -97,7 +97,7 @@ EOM
 
       echo "🤖 ${ASSISTANT_MESSAGE}"
 
-      # Add assistant response to conversation history (from callback)
+      # Add assistant response to conversation history
       add_assistant_message CONVERSATION_HISTORY "${ASSISTANT_MESSAGE}"
       ;;
     *)
