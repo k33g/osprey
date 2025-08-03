@@ -93,6 +93,44 @@ function callback() {
 osprey_chat_stream ${DMR_BASE_URL} "${DATA}" callback
 ```
 
+### Embeddings
+
+Osprey provides functions for creating text embeddings and calculating similarity between vectors.
+
+#### `osprey_create_embedding`
+
+Creates text embeddings using the specified model through an OpenAI-compatible API:
+
+```bash
+DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
+MODEL="ai/nomic-embed-text:latest"
+
+read -r -d '' DATA <<- EOM
+{
+  "model": "${MODEL}",
+  "input": "The quick brown fox jumps over the lazy dog"
+}
+EOM
+
+embedding=$(osprey_create_embedding ${DMR_BASE_URL} "${DATA}")
+echo "${embedding}"
+```
+
+#### `cosine_similarity`
+
+Calculates the cosine similarity between two embedding vectors. Returns a value between -1 and 1, where 1 indicates identical vectors, 0 indicates orthogonal vectors, and -1 indicates opposite vectors:
+
+```bash
+# Example vectors (in JSON array format)
+vector1="[0.1, 0.2, 0.3, 0.4]"
+vector2="[0.4, 0.3, 0.2, 0.1]"
+
+similarity=$(cosine_similarity "$vector1" "$vector2")
+echo "Similarity: $similarity"
+
+# For word embeddings, similarities above 0.8 typically indicate semantically related content
+```
+
 ### Function Calling
 ```bash
 DMR_BASE_URL="http://localhost:12434/engines/llama.cpp/v1"
@@ -157,6 +195,7 @@ done
 - `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_m`
 - `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s`
 - `hf.co/salesforce/xlam-2-3b-fc-r-gguf:q3_k_l`
+> ✋ It seems there is a bug with Llama.cpp: [issue 14101](https://github.com/ggml-org/llama.cpp/issues/14101)
 
 Example with parallel tool calls:
 ```bash
@@ -178,6 +217,47 @@ read -r -d '' DATA <<- EOM
 }
 EOM
 ```
+
+#### Loop function calling
+
+For complex scenarios requiring multiple function calls and conversation flow management, Osprey provides functions to handle tool message loops:
+
+##### `add_tool_calls_message`
+
+Adds an assistant message with tool calls to the conversation history:
+
+```bash
+# Add assistant's tool calls to conversation
+add_tool_calls_message CONVERSATION_HISTORY "$tool_calls"
+```
+
+##### `add_tool_message`
+
+Adds a tool response message to the conversation history:
+
+```bash
+# Add function execution result to conversation
+add_tool_message CONVERSATION_HISTORY "$tool_call_id" "$function_result"
+```
+
+##### `get_finish_reason`
+
+Extracts the finish reason from the API response to determine if more tool calls are needed:
+
+```bash
+# Check if the model wants to make more function calls
+finish_reason=$(get_finish_reason "$response")
+
+if [[ "$finish_reason" == "tool_calls" ]]; then
+    # Process tool calls and continue conversation
+    echo "Model wants to make function calls"
+else
+    # Conversation is complete
+    echo "Conversation finished: $finish_reason"
+fi
+```
+
+These functions enable building conversational agents that can handle multi-step tool calling scenarios where the model may need to make several function calls and incorporate their results before providing a final response.
 
 See the `examples/` directory for more detailed usage examples including conversation memory management.
 
