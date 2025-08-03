@@ -751,3 +751,116 @@ EOF
     # Return the response
     echo "$result"
 }
+
+: <<'COMMENT'
+osprey_embeddings - Generates embeddings using the DMR API.
+
+ Args:
+    DMR_BASE_URL (str): The URL of the DMR API.
+    DATA (str): The JSON data to be sent to the API.
+
+ Returns:
+    str: The JSON response from the API, containing the generated response and context.
+COMMENT
+function osprey_create_embedding() {
+    DMR_BASE_URL="${1}"
+    DATA="${2}"
+
+    DATA=$(remove_new_lines "${DATA}")
+
+    #echo "Using DATA: ${DATA}"
+    #echo "Using DMR_BASE_URL: ${DMR_BASE_URL}"
+
+    JSON_RESULT=$(curl --silent ${DMR_BASE_URL}/embeddings \
+        -H "Content-Type: application/json" \
+        -d "${DATA}"
+    )
+
+    EMBEDDING_CONTENT=$(echo "${JSON_RESULT}" | jq -r '.data[0].embedding' | jq -r 'tostring')
+    #EMBEDDING_CONTENT=$(echo "${JSON_RESULT}" | jq -r '.data[0]')
+
+    echo "${EMBEDDING_CONTENT}"
+}
+
+: <<'COMMENT'
+## Cosine Similarity
+
+**Cosine similarity** measures the similarity between two vectors by calculating the cosine of the angle between them.
+
+### Formula
+```
+cosine_similarity(A, B) = (A · B) / (||A|| × ||B||)
+```
+
+Where:
+- `A · B` = dot product of the vectors
+- `||A||` and `||B||` = norms (magnitudes) of the vectors
+
+### Values
+- **1**: identical vectors (0° angle)
+- **0**: orthogonal vectors (90° angle)
+- **-1**: opposite vectors (180° angle)
+
+### Interpretation
+
+When cosine similarity is near 1, the two vectors are **very similar** in direction.
+
+### The Scale:
+- **1.0** = Perfect similarity (vectors point in exactly the same direction)
+- **0.9** = Very high similarity 
+- **0.7** = Good similarity
+- **0.5** = Moderate similarity
+- **0.0** = No similarity (perpendicular vectors)
+- **-1.0** = Complete opposite (vectors point in opposite directions)
+
+### In Practice:
+- **Text similarity**: If two documents have cosine similarity of 0.95, they're very similar in topic/content
+- **User preferences**: Users with 0.85 similarity likely have very similar tastes
+- **Word embeddings**: Words with 0.8+ similarity are semantically related
+
+COMMENT
+
+# AWK functions for vector operations
+cosine_similarity() {
+    local vector1="$1"
+    local vector2="$2"
+    
+    awk -v v1="$vector1" -v v2="$vector2" '
+    function dot_product(arr1, arr2, n) {
+        sum = 0.0
+        for (i = 1; i <= n; i++) { 
+            sum = sum + arr1[i] * arr2[i]
+        }
+        return sum
+    }
+
+    function cosine_distance(json_v1, json_v2) {
+        gsub(/^\[|\]$/, "", json_v1)    # Remove brackets from the beginning and end
+        n1 = split(json_v1, arr1, ",")  # Split the string on commas
+
+        gsub(/^\[|\]$/, "", json_v2)    # Remove brackets from the beginning and end
+        n2 = split(json_v2, arr2, ",")  # Split the string on commas
+
+        if (n1 != n2) return 0.0  # Vectors must be same length
+
+        # Calculate the cosine distance between two vectors
+        product = dot_product(arr1, arr2, n1)
+
+        norm1 = sqrt(dot_product(arr1, arr1, n1))
+        norm2 = sqrt(dot_product(arr2, arr2, n2))
+
+        result = 0.0
+        if (norm1 <= 0.0 || norm2 <= 0.0) {
+            # Handle potential division by zero
+            result = 0.0
+        } else {
+            result = product / (norm1 * norm2)
+        }
+        return result
+    }
+
+    BEGIN {
+        print cosine_distance(v1, v2)
+    }
+    '
+}
