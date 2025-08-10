@@ -832,6 +832,132 @@ EOF
 }
 
 : <<'COMMENT'
+get_mcp_http_resources - Gets the resources list from an MCP HTTP server by sending the proper initialization sequence.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+
+Returns:
+    str: JSON array of resources from the MCP HTTP server.
+COMMENT
+function get_mcp_http_resources() {
+    local mcp_server_url="$1"
+    
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+    
+    # STEP 1: Initialize the server and get session ID
+    local init_data='{
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "id": "init-uuid",
+        "params": {
+            "protocolVersion": "2024-11-05"
+        }
+    }'
+    
+    # Get the session ID from headers
+    local session_id=$(curl -i -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$init_data" \
+        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
+    
+    if [ -z "$session_id" ]; then
+        echo "Error: Failed to get session ID from MCP server" >&2
+        return 1
+    fi
+    
+    # STEP 2: Get resources list using the session ID
+    local resources_data='{
+        "jsonrpc": "2.0",
+        "id": "resources-list",
+        "method": "resources/list",
+        "params": {}
+    }'
+    
+    # Get resources list
+    local result=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Mcp-Session-Id: $session_id" \
+        -d "$resources_data" \
+        "$mcp_server_url/mcp" | jq -r '.result.resources')
+    
+    # Return the resources list
+    echo "$result"
+}
+
+: <<'COMMENT'
+read_mcp_http_resource - Reads a specific resource from an MCP HTTP server by URI.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+    resource_uri (str): The URI of the resource to read.
+
+Returns:
+    str: Complete JSON response from the MCP HTTP server including the resource content.
+COMMENT
+function read_mcp_http_resource() {
+    local mcp_server_url="$1"
+    local resource_uri="$2"
+    
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$resource_uri" ]; then
+        echo "Error: Resource URI is required" >&2
+        return 1
+    fi
+    
+    # STEP 1: Initialize the server and get session ID
+    local init_data='{
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "id": "init-uuid",
+        "params": {
+            "protocolVersion": "2024-11-05"
+        }
+    }'
+    
+    # Get the session ID from headers
+    local session_id=$(curl -i -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$init_data" \
+        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
+    
+    if [ -z "$session_id" ]; then
+        echo "Error: Failed to get session ID from MCP server" >&2
+        return 1
+    fi
+    
+    # STEP 2: Read the resource using the session ID
+    local read_data=$(cat << EOF
+{
+    "jsonrpc": "2.0",
+    "id": "resource-read",
+    "method": "resources/read",
+    "params": {
+        "uri": "$resource_uri"
+    }
+}
+EOF
+)
+    
+    # Read the resource and return the complete response
+    local result=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Mcp-Session-Id: $session_id" \
+        -d "$read_data" \
+        "$mcp_server_url/mcp")
+    
+    # Return the response
+    echo "$result"
+}
+
+: <<'COMMENT'
 osprey_embeddings - Generates embeddings using the DMR API.
 
  Args:
