@@ -578,6 +578,85 @@ EOF
 }
 
 : <<'COMMENT'
+get_mcp_resources - Gets the resources list from an MCP server by sending the proper initialization sequence.
+
+Args:
+    server_command (str): The command to run the MCP server (e.g., "node index.js").
+
+Returns:
+    str: JSON array of resources from the MCP server.
+COMMENT
+function get_mcp_resources() {
+    local server_command="$1"
+    
+    if [ -z "$server_command" ]; then
+        echo "Error: Server command is required" >&2
+        return 1
+    fi
+    
+    # Create a temporary input file with the MCP initialization sequence
+    local temp_file=$(mktemp)
+    
+    cat > "$temp_file" << 'EOF'
+{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "osprey", "version": "0.0.2"}}}
+{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+{"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}}
+EOF
+    
+    # Run the server with the input and extract resources list  
+    local result=$(cat "$temp_file" | bash -c "$server_command" | jq -r 'select(.id == 2) | .result.resources')
+    
+    # Clean up
+    rm "$temp_file"
+    
+    # Return the resources list
+    echo "$result"
+}
+
+: <<'COMMENT'
+read_mcp_resource - Reads a specific resource from an MCP server by URI.
+
+Args:
+    server_command (str): The command to run the MCP server (e.g., "node index.js").
+    resource_uri (str): The URI of the resource to read.
+
+Returns:
+    str: Complete JSON response from the MCP server including the resource content.
+COMMENT
+function read_mcp_resource() {
+    local server_command="$1"
+    local resource_uri="$2"
+    
+    if [ -z "$server_command" ]; then
+        echo "Error: Server command is required" >&2
+        return 1
+    fi
+    
+    if [ -z "$resource_uri" ]; then
+        echo "Error: Resource URI is required" >&2
+        return 1
+    fi
+    
+    # Create a temporary input file with the MCP initialization sequence and resource read
+    local temp_file=$(mktemp)
+    
+    cat > "$temp_file" << EOF
+{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "osprey", "version": "0.0.2"}}}
+{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+{"jsonrpc": "2.0", "id": 2, "method": "resources/read", "params": {"uri": "$resource_uri"}}
+EOF
+    
+    # Run the server with the input and extract the resource read response
+    local result=$(cat "$temp_file" | bash -c "$server_command" | jq -c '.' | jq -s '.')
+    
+    # Clean up
+    rm "$temp_file"
+    
+    # Return the response
+    echo "$result"
+}
+
+: <<'COMMENT'
 get_tool_content - Extracts the text content from an MCP tool call response.
 
 Args:
