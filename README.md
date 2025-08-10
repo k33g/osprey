@@ -18,7 +18,7 @@
 
 ## Install the library
 ```bash
-curl -fsSL https://github.com/k33g/osprey/releases/download/v0.0.8/osprey.sh -o ./osprey.sh
+curl -fsSL https://github.com/k33g/osprey/releases/download/v0.0.9/osprey.sh -o ./osprey.sh
 chmod +x ./osprey.sh
 ```
 

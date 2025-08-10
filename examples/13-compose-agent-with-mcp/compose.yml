@@ -5,7 +5,7 @@ services:
       #dockerfile: Dockerfile
       dockerfile: Dockerfile.dev
       args:
-        - OSPREY_VERSION=v0.0.8
+        - OSPREY_VERSION=v0.0.9
     tty: true          # Enable TTY
     stdin_open: true   # Keep stdin open
     environment:

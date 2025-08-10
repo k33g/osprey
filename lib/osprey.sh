@@ -7,7 +7,7 @@ COMMENT
 
 function osprey_version() {
     echo "Osprey - A Bash library for interacting with the DMR API"
-    echo "Version: v0.0.8"
+    echo "Version: v0.0.9"
     echo "Author: k33g"
     echo "License: unlicense"
 }
