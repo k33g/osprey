@@ -460,6 +460,86 @@ You can filter available tools using the `transform_to_openai_format_with_filter
 TOOLS=$(transform_to_openai_format_with_filter "${MCP_TOOLS}" "search" "fetch")
 ```
 
+## MCP Resources
+
+MCP (Model Context Protocol) resources provide access to data and content from MCP servers. Osprey includes functions for both STDIO and HTTP MCP resource operations.
+
+### STDIO MCP Resources
+
+#### `get_mcp_resources`
+Lists all available resources from an MCP STDIO server.
+
+```bash
+# Get resources from a Go MCP server
+resources=$(get_mcp_resources "cd /path/to/server && go run main.go")
+echo "$resources" | jq '.'
+```
+
+**Parameters:**
+- `server_command`: Command to run the MCP STDIO server
+
+**Returns:** JSON array of available resources
+
+#### `read_mcp_resource`
+Reads a specific resource from an MCP STDIO server by URI.
+
+```bash
+# Read a specific resource
+content=$(read_mcp_resource "cd /path/to/server && go run main.go" "snippets://golang")
+echo "$content" | jq '.'
+
+# Extract just the text content
+text=$(echo "$content" | jq -r '.[1].result.contents[0].text')
+echo "$text"
+```
+
+**Parameters:**
+- `server_command`: Command to run the MCP STDIO server
+- `resource_uri`: URI of the resource to read
+
+**Returns:** Complete JSON response including resource content
+
+### HTTP MCP Resources
+
+#### `get_mcp_http_resources`
+Lists all available resources from an MCP HTTP server.
+
+```bash
+# Get resources from HTTP server
+resources=$(get_mcp_http_resources "http://localhost:9090")
+echo "$resources" | jq '.'
+```
+
+**Parameters:**
+- `mcp_server_url`: URL of the MCP HTTP server
+
+**Returns:** JSON array of available resources
+
+#### `read_mcp_http_resource`
+Reads a specific resource from an MCP HTTP server by URI.
+
+```bash
+# Read a specific resource
+content=$(read_mcp_http_resource "http://localhost:9090" "snippets://golang")
+echo "$content" | jq '.'
+
+# Extract just the text content
+text=$(echo "$content" | jq -r '.result.contents[0].text')
+echo "$text"
+```
+
+**Parameters:**
+- `mcp_server_url`: URL of the MCP HTTP server
+- `resource_uri`: URI of the resource to read
+
+**Returns:** Complete JSON response including resource content
+
+### Examples
+
+See the example implementations:
+- STDIO: `/examples/20-mcp-resources/stdio.main.sh`
+- HTTP: `/examples/20-mcp-resources/http.main.sh`
+
 ## Creating an Agent with Agentic Compose
 
 You can create containerized AI agents using Docker Compose for easy deployment and management. The `examples/05-compose-agent/` directory demonstrates how to build a complete agentic system.
