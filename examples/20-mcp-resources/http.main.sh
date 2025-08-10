@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Load the osprey library
-source ../../../lib/osprey.sh
+. "../../lib/osprey.sh"
 
 # HTTP MCP server URL
 MCP_SERVER_URL="http://localhost:9090"
@@ -62,5 +62,3 @@ echo "   ---"
 
 echo "$resources" | jq '.[] | {uri, name, description, mimeType}'
 echo
-
-echo "=== Examples Complete ==="

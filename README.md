@@ -537,8 +537,8 @@ echo "$text"
 ### Examples
 
 See the example implementations:
-- STDIO: `/examples/20-mcp-resources/mcp-stdio-server/main.sh`
-- HTTP: `/examples/20-mcp-resources/mcp-http-server/main.sh`
+- STDIO: `/examples/20-mcp-resources/stdio.main.sh`
+- HTTP: `/examples/20-mcp-resources/http.main.sh`
 
 ## Creating an Agent with Agentic Compose
 

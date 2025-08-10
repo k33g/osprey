@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Load the osprey library
-source ../../../lib/osprey.sh
+. "../../lib/osprey.sh"
 
 # Server command to run the MCP server (we need to be in the correct directory)
-SERVER_COMMAND="cd $(dirname "$0") && go run main.go"
+SERVER_COMMAND="cd mcp-stdio-server && go run main.go"
 
 echo "=== MCP Resources Example ==="
 echo
@@ -43,5 +43,3 @@ echo "   ---"
 
 echo "$resources" | jq -r '.[].uri'
 echo
-
-echo "=== Examples Complete ==="
