@@ -499,6 +499,20 @@ echo "$text"
 
 **Returns:** Complete JSON response including resource content
 
+#### `get_mcp_resources_templates`
+Lists all available resource templates from an MCP STDIO server.
+
+```bash
+# Get resource templates from a Go MCP server
+templates=$(get_mcp_resources_templates "cd /path/to/server && go run main.go")
+echo "$templates" | jq '.'
+```
+
+**Parameters:**
+- `server_command`: Command to run the MCP STDIO server
+
+**Returns:** JSON array of available resource templates
+
 ### HTTP MCP Resources
 
 #### `get_mcp_http_resources`
@@ -533,6 +547,20 @@ echo "$text"
 - `resource_uri`: URI of the resource to read
 
 **Returns:** Complete JSON response including resource content
+
+#### `get_mcp_http_resources_templates`
+Lists all available resource templates from an MCP HTTP server.
+
+```bash
+# Get resource templates from HTTP server
+templates=$(get_mcp_http_resources_templates "http://localhost:9090")
+echo "$templates" | jq '.'
+```
+
+**Parameters:**
+- `mcp_server_url`: URL of the MCP HTTP server
+
+**Returns:** JSON array of available resource templates
 
 ### Examples
 
