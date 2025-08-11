@@ -889,6 +889,99 @@ function get_mcp_http_resources() {
 }
 
 : <<'COMMENT'
+get_mcp_resources_templates - Gets the resources templates list from an MCP server by sending the proper initialization sequence.
+
+Args:
+    server_command (str): The command to run the MCP server (e.g., "node index.js").
+
+Returns:
+    str: JSON array of resources templates from the MCP server.
+COMMENT
+function get_mcp_resources_templates() {
+    local server_command="$1"
+    
+    if [ -z "$server_command" ]; then
+        echo "Error: Server command is required" >&2
+        return 1
+    fi
+    
+    # Create a temporary input file with the MCP initialization sequence
+    local temp_file=$(mktemp)
+    
+    cat > "$temp_file" << 'EOF'
+{"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "osprey", "version": "0.0.2"}}}
+{"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+{"jsonrpc": "2.0", "id": 2, "method": "resources/templates/list", "params": {}}
+EOF
+    
+    # Run the server with the input and extract resources templates list  
+    local result=$(cat "$temp_file" | bash -c "$server_command" | jq -r 'select(.id == 2) | .result.resourceTemplates')
+    
+    # Clean up
+    rm "$temp_file"
+    
+    # Return the resources templates list
+    echo "$result"
+}
+
+: <<'COMMENT'
+get_mcp_http_resources_templates - Gets the resources templates list from an MCP HTTP server by sending the proper initialization sequence.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+
+Returns:
+    str: JSON array of resources templates from the MCP HTTP server.
+COMMENT
+function get_mcp_http_resources_templates() {
+    local mcp_server_url="$1"
+    
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+    
+    # STEP 1: Initialize the server and get session ID
+    local init_data='{
+        "jsonrpc": "2.0",
+        "method": "initialize",
+        "id": "init-uuid",
+        "params": {
+            "protocolVersion": "2024-11-05"
+        }
+    }'
+    
+    # Get the session ID from headers
+    local session_id=$(curl -i -s -X POST \
+        -H "Content-Type: application/json" \
+        -d "$init_data" \
+        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
+    
+    if [ -z "$session_id" ]; then
+        echo "Error: Failed to get session ID from MCP server" >&2
+        return 1
+    fi
+    
+    # STEP 2: Get resources templates list using the session ID
+    local resources_templates_data='{
+        "jsonrpc": "2.0",
+        "id": "resources-templates-list",
+        "method": "resources/templates/list",
+        "params": {}
+    }'
+    
+    # Get resources templates list
+    local result=$(curl -s -X POST \
+        -H "Content-Type: application/json" \
+        -H "Mcp-Session-Id: $session_id" \
+        -d "$resources_templates_data" \
+        "$mcp_server_url/mcp" | jq -r '.result.resourceTemplates')
+    
+    # Return the resources templates list
+    echo "$result"
+}
+
+: <<'COMMENT'
 read_mcp_http_resource - Reads a specific resource from an MCP HTTP server by URI.
 
 Args:
