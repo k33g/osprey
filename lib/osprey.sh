@@ -699,23 +699,18 @@ function get_tool_content_http() {
 }
 
 : <<'COMMENT'
-get_mcp_http_tools - Gets the tools list from an MCP HTTP server by sending the proper initialization sequence.
+get_mcp_http_session_id - Gets the session id MCP HTTP server by sending the proper initialization sequence.
 
 Args:
     mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
 
 Returns:
-    str: JSON array of tools from the MCP HTTP server.
+    str: session ID from the MCP HTTP server.
 COMMENT
-function get_mcp_http_tools() {
+function get_mcp_http_session_id() {
     local mcp_server_url="$1"
-    
-    if [ -z "$mcp_server_url" ]; then
-        echo "Error: MCP server URL is required" >&2
-        return 1
-    fi
-    
-    # STEP 1: Initialize the server and get session ID
+
+    # Initialize the server and get session ID
     local init_data='{
         "jsonrpc": "2.0",
         "method": "initialize",
@@ -735,22 +730,51 @@ function get_mcp_http_tools() {
         echo "Error: Failed to get session ID from MCP server" >&2
         return 1
     fi
+
+    echo "$session_ID"
+}
+
+: <<'COMMENT'
+get_mcp_http_tools - Gets the tools list from an MCP HTTP server by sending the proper initialization sequence.
+
+Args:
+    mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+    mcp_server_session (str): Use normal "stateful" or "stateless" session. Defaults to "stateful".
+
+Returns:
+    str: JSON array of tools from the MCP HTTP server.
+COMMENT
+function get_mcp_http_tools() {
+    local mcp_server_url="$1"
+    local mcp_server_session="$2"
     
-    # STEP 2: Get tools list using the session ID
+    if [ -z "$mcp_server_url" ]; then
+        echo "Error: MCP server URL is required" >&2
+        return 1
+    fi
+
     local tools_data='{
         "jsonrpc": "2.0",
         "id": "tools-list",
         "method": "tools/list",
         "params": {}
     }'
-    
+
     # Get tools list
-    local result=$(curl -s -X POST \
-        -H "Content-Type: application/json" \
-        -H "Mcp-Session-Id: $session_id" \
-        -d "$tools_data" \
-        "$mcp_server_url/mcp" | jq -r '.result.tools')
-    
+    if [[ "$mcp_server_session" == "stateless" ]]; then
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "$tools_data" \
+            "$mcp_server_url/mcp" | jq -r '.result.tools')
+    else
+        local session_id=$(get_mcp_http_session_id "$mcp_server_url")
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Mcp-Session-Id: $session_id" \
+            -d "$tools_data" \
+            "$mcp_server_url/mcp" | jq -r '.result.tools')
+    fi
+
     # Return the tools list
     echo "$result"
 }
@@ -762,6 +786,7 @@ Args:
     mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
     tool_name (str): The name of the tool to call.
     tool_arguments (str): JSON string of arguments to pass to the tool.
+    mcp_server_session (str): Use normal "stateful" or "stateless" session. Defaults to "stateful".
 
 Returns:
     str: Complete JSON response from the MCP HTTP server including the tool call result.
@@ -770,7 +795,8 @@ function call_mcp_http_tool() {
     local mcp_server_url="$1"
     local tool_name="$2"
     local tool_arguments="$3"
-    
+    local mcp_server_session="$4"
+
     if [ -z "$mcp_server_url" ]; then
         echo "Error: MCP server URL is required" >&2
         return 1
@@ -784,29 +810,7 @@ function call_mcp_http_tool() {
     if [ -z "$tool_arguments" ]; then
         tool_arguments="{}"
     fi
-    
-    # STEP 1: Initialize the server and get session ID
-    local init_data='{
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "id": "init-uuid",
-        "params": {
-            "protocolVersion": "2024-11-05"
-        }
-    }'
-    
-    # Get the session ID from headers
-    local session_id=$(curl -i -s -X POST \
-        -H "Content-Type: application/json" \
-        -d "$init_data" \
-        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
-    
-    if [ -z "$session_id" ]; then
-        echo "Error: Failed to get session ID from MCP server" >&2
-        return 1
-    fi
-    
-    # STEP 2: Call the tool using the session ID
+
     local call_data=$(cat << EOF
 {
     "jsonrpc": "2.0",
@@ -819,14 +823,21 @@ function call_mcp_http_tool() {
 }
 EOF
 )
-    
     # Call the tool and return the complete response
-    local result=$(curl -s -X POST \
-        -H "Content-Type: application/json" \
-        -H "Mcp-Session-Id: $session_id" \
-        -d "$call_data" \
-        "$mcp_server_url/mcp")
-    
+    if [[ "$mcp_server_session" == "stateless" ]]; then
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "$call_data" \
+            "$mcp_server_url/mcp")
+    else
+        local session_id=$(get_mcp_http_session_id "$mcp_server_url")
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Mcp-Session-Id: $session_id" \
+            -d "$call_data" \
+            "$mcp_server_url/mcp")
+    fi
+
     # Return the response
     echo "$result"
 }
@@ -836,54 +847,42 @@ get_mcp_http_resources - Gets the resources list from an MCP HTTP server by send
 
 Args:
     mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+    mcp_server_session (str): Use normal "stateful" or "stateless" session. Defaults to "stateful".
 
 Returns:
     str: JSON array of resources from the MCP HTTP server.
 COMMENT
 function get_mcp_http_resources() {
     local mcp_server_url="$1"
-    
+    local mcp_server_session="$2"
+
     if [ -z "$mcp_server_url" ]; then
         echo "Error: MCP server URL is required" >&2
         return 1
     fi
-    
-    # STEP 1: Initialize the server and get session ID
-    local init_data='{
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "id": "init-uuid",
-        "params": {
-            "protocolVersion": "2024-11-05"
-        }
-    }'
-    
-    # Get the session ID from headers
-    local session_id=$(curl -i -s -X POST \
-        -H "Content-Type: application/json" \
-        -d "$init_data" \
-        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
-    
-    if [ -z "$session_id" ]; then
-        echo "Error: Failed to get session ID from MCP server" >&2
-        return 1
-    fi
-    
-    # STEP 2: Get resources list using the session ID
+
     local resources_data='{
         "jsonrpc": "2.0",
         "id": "resources-list",
         "method": "resources/list",
         "params": {}
     }'
-    
+
     # Get resources list
-    local result=$(curl -s -X POST \
-        -H "Content-Type: application/json" \
-        -H "Mcp-Session-Id: $session_id" \
-        -d "$resources_data" \
-        "$mcp_server_url/mcp" | jq -r '.result.resources')
-    
+    if [[ "$mcp_server_session" == "stateless" ]]; then
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "$resources_data" \
+            "$mcp_server_url/mcp" | jq -r '.result.resources')
+    else
+        local session_id=$(get_mcp_http_session_id "$mcp_server_url")
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Mcp-Session-Id: $session_id" \
+            -d "$resources_data" \
+            "$mcp_server_url/mcp" | jq -r '.result.resources')
+    fi
+
     # Return the resources list
     echo "$result"
 }
@@ -929,53 +928,41 @@ get_mcp_http_resources_templates - Gets the resources templates list from an MCP
 
 Args:
     mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
+    mcp_server_session (str): Use normal "stateful" or "stateless" session. Defaults to "stateful".
 
 Returns:
     str: JSON array of resources templates from the MCP HTTP server.
 COMMENT
 function get_mcp_http_resources_templates() {
     local mcp_server_url="$1"
-    
+    local mcp_server_session="$2"
+
     if [ -z "$mcp_server_url" ]; then
         echo "Error: MCP server URL is required" >&2
         return 1
     fi
     
-    # STEP 1: Initialize the server and get session ID
-    local init_data='{
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "id": "init-uuid",
-        "params": {
-            "protocolVersion": "2024-11-05"
-        }
-    }'
-    
-    # Get the session ID from headers
-    local session_id=$(curl -i -s -X POST \
-        -H "Content-Type: application/json" \
-        -d "$init_data" \
-        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
-    
-    if [ -z "$session_id" ]; then
-        echo "Error: Failed to get session ID from MCP server" >&2
-        return 1
-    fi
-    
-    # STEP 2: Get resources templates list using the session ID
     local resources_templates_data='{
         "jsonrpc": "2.0",
         "id": "resources-templates-list",
         "method": "resources/templates/list",
         "params": {}
     }'
-    
+
     # Get resources templates list
-    local result=$(curl -s -X POST \
-        -H "Content-Type: application/json" \
-        -H "Mcp-Session-Id: $session_id" \
-        -d "$resources_templates_data" \
-        "$mcp_server_url/mcp" | jq -r '.result.resourceTemplates')
+    if [[ "$mcp_server_session" == "stateless" ]]; then
+        local result=$(curl -s -X POST \
+                -H "Content-Type: application/json" \
+                -d "$resources_templates_data" \
+                "$mcp_server_url/mcp" | jq -r '.result.resourceTemplates')
+    else
+        local session_id=$(get_mcp_http_session_id "$mcp_server_url")
+        local result=$(curl -s -X POST \
+                -H "Content-Type: application/json" \
+                -H "Mcp-Session-Id: $session_id" \
+                -d "$resources_templates_data" \
+                "$mcp_server_url/mcp" | jq -r '.result.resourceTemplates')
+    fi
     
     # Return the resources templates list
     echo "$result"
@@ -987,6 +974,7 @@ read_mcp_http_resource - Reads a specific resource from an MCP HTTP server by UR
 Args:
     mcp_server_url (str): The URL of the MCP HTTP server (e.g., "http://localhost:9090").
     resource_uri (str): The URI of the resource to read.
+    mcp_server_session (str): Use normal "stateful" or "stateless" session. Defaults to "stateful".
 
 Returns:
     str: Complete JSON response from the MCP HTTP server including the resource content.
@@ -994,7 +982,8 @@ COMMENT
 function read_mcp_http_resource() {
     local mcp_server_url="$1"
     local resource_uri="$2"
-    
+    local mcp_server_session="$3"
+
     if [ -z "$mcp_server_url" ]; then
         echo "Error: MCP server URL is required" >&2
         return 1
@@ -1004,29 +993,7 @@ function read_mcp_http_resource() {
         echo "Error: Resource URI is required" >&2
         return 1
     fi
-    
-    # STEP 1: Initialize the server and get session ID
-    local init_data='{
-        "jsonrpc": "2.0",
-        "method": "initialize",
-        "id": "init-uuid",
-        "params": {
-            "protocolVersion": "2024-11-05"
-        }
-    }'
-    
-    # Get the session ID from headers
-    local session_id=$(curl -i -s -X POST \
-        -H "Content-Type: application/json" \
-        -d "$init_data" \
-        "$mcp_server_url/mcp" | grep -i "mcp-session-id:" | cut -d' ' -f2 | tr -d '\r\n')
-    
-    if [ -z "$session_id" ]; then
-        echo "Error: Failed to get session ID from MCP server" >&2
-        return 1
-    fi
-    
-    # STEP 2: Read the resource using the session ID
+
     local read_data=$(cat << EOF
 {
     "jsonrpc": "2.0",
@@ -1038,14 +1005,22 @@ function read_mcp_http_resource() {
 }
 EOF
 )
-    
+
     # Read the resource and return the complete response
-    local result=$(curl -s -X POST \
-        -H "Content-Type: application/json" \
-        -H "Mcp-Session-Id: $session_id" \
-        -d "$read_data" \
-        "$mcp_server_url/mcp")
-    
+    if [[ "$mcp_server_session" == "stateless" ]]; then
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "$read_data" \
+            "$mcp_server_url/mcp")
+    else
+        local session_id=$(get_mcp_http_session_id "$mcp_server_url")
+        local result=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Mcp-Session-Id: $session_id" \
+            -d "$read_data" \
+            "$mcp_server_url/mcp")
+    fi
+
     # Return the response
     echo "$result"
 }
