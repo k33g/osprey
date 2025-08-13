@@ -18,7 +18,7 @@
 
 ## Install the library
 ```bash
-curl -fsSL https://github.com/k33g/osprey/releases/download/v0.1.0/osprey.sh -o ./osprey.sh
+curl -fsSL https://github.com/k33g/osprey/releases/download/v0.1.1/osprey.sh -o ./osprey.sh
 chmod +x ./osprey.sh
 ```
 
@@ -328,6 +328,13 @@ done
 
 Osprey supports MCP servers with streamable HTTP transport for real-time tool execution and response streaming. This allows for more interactive experiences with MCP tools that can provide streaming responses.
 
+### Stateful vs Stateless Sessions
+
+Osprey HTTP MCP functions now support both stateful and stateless session modes:
+
+- **Stateful** (default): Creates a session with the MCP server for maintaining state across multiple calls
+- **Stateless**: Each call is independent without session management, improving performance for simple operations
+
 ### Setting up a Streamable HTTP MCP Server
 
 First, build your streamable HTTP MCP server Docker image:
@@ -353,8 +360,11 @@ MODEL="hf.co/salesforce/xlam-2-3b-fc-r-gguf:q4_k_s"
 # Define the streamable HTTP MCP server endpoint
 MCP_SERVER="http://localhost:9090"
 
-# Get available tools from streamable MCP server
+# Get available tools from streamable MCP server (stateful by default)
 MCP_TOOLS=$(get_mcp_http_tools "$MCP_SERVER")
+
+# Or use stateless mode for better performance
+# MCP_TOOLS=$(get_mcp_http_tools "$MCP_SERVER" "stateless")
 TOOLS=$(transform_to_openai_format "$MCP_TOOLS")
 
 read -r -d '' DATA <<- EOM
@@ -384,8 +394,11 @@ for tool_call in $TOOL_CALLS; do
     FUNCTION_NAME=$(get_function_name "$tool_call")
     FUNCTION_ARGS=$(get_function_args "$tool_call")
         
-    # Execute function via MCP
+    # Execute function via MCP (stateful by default)
     MCP_RESPONSE=$(call_mcp_http_tool "$MCP_SERVER" "$FUNCTION_NAME" "$FUNCTION_ARGS")
+    
+    # Or use stateless mode
+    # MCP_RESPONSE=$(call_mcp_http_tool "$MCP_SERVER" "$FUNCTION_NAME" "$FUNCTION_ARGS" "stateless")
     RESULT_CONTENT=$(get_tool_content_http "$MCP_RESPONSE")
     
     echo "Function result: $RESULT_CONTENT"
@@ -519,13 +532,18 @@ echo "$templates" | jq '.'
 Lists all available resources from an MCP HTTP server.
 
 ```bash
-# Get resources from HTTP server
+# Get resources from HTTP server (stateful by default)
 resources=$(get_mcp_http_resources "http://localhost:9090")
+echo "$resources" | jq '.'
+
+# Or use stateless mode
+resources=$(get_mcp_http_resources "http://localhost:9090" "stateless")
 echo "$resources" | jq '.'
 ```
 
 **Parameters:**
 - `mcp_server_url`: URL of the MCP HTTP server
+- `mcp_server_session`: (optional) Use "stateful" (default) or "stateless" session mode
 
 **Returns:** JSON array of available resources
 
@@ -533,8 +551,12 @@ echo "$resources" | jq '.'
 Reads a specific resource from an MCP HTTP server by URI.
 
 ```bash
-# Read a specific resource
+# Read a specific resource (stateful by default)
 content=$(read_mcp_http_resource "http://localhost:9090" "snippets://golang")
+echo "$content" | jq '.'
+
+# Or use stateless mode
+content=$(read_mcp_http_resource "http://localhost:9090" "snippets://golang" "stateless")
 echo "$content" | jq '.'
 
 # Extract just the text content
@@ -545,6 +567,7 @@ echo "$text"
 **Parameters:**
 - `mcp_server_url`: URL of the MCP HTTP server
 - `resource_uri`: URI of the resource to read
+- `mcp_server_session`: (optional) Use "stateful" (default) or "stateless" session mode
 
 **Returns:** Complete JSON response including resource content
 
@@ -552,13 +575,18 @@ echo "$text"
 Lists all available resource templates from an MCP HTTP server.
 
 ```bash
-# Get resource templates from HTTP server
+# Get resource templates from HTTP server (stateful by default)
 templates=$(get_mcp_http_resources_templates "http://localhost:9090")
+echo "$templates" | jq '.'
+
+# Or use stateless mode
+templates=$(get_mcp_http_resources_templates "http://localhost:9090" "stateless")
 echo "$templates" | jq '.'
 ```
 
 **Parameters:**
 - `mcp_server_url`: URL of the MCP HTTP server
+- `mcp_server_session`: (optional) Use "stateful" (default) or "stateless" session mode
 
 **Returns:** JSON array of available resource templates
 

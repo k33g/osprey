@@ -7,7 +7,7 @@ COMMENT
 
 function osprey_version() {
     echo "Osprey - A Bash library for interacting with the DMR API"
-    echo "Version: v0.1.0"
+    echo "Version: v0.1.1"
     echo "Author: k33g"
     echo "License: unlicense"
 }
@@ -731,7 +731,7 @@ function get_mcp_http_session_id() {
         return 1
     fi
 
-    echo "$session_ID"
+    echo "$session_id"
 }
 
 : <<'COMMENT'
